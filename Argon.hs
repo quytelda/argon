@@ -80,3 +80,17 @@ runTreeParser action = runState . runStateT action
 -- | Execute a TreeParser computation on a different tree.
 withTree :: TreeParser v a -> ParseTree v -> TreeParser r (a, ParseTree v)
 withTree action = lift . runStateT action
+
+parseToken :: Text -> TreeParser r Token
+parseToken (T.stripPrefix "--" -> Just name) = pure $ LongOption name
+parseToken content                           = pure $ Argument content
+
+popToken :: TreeParser r (Maybe Token)
+popToken = lift pop >>= \case
+  Just s -> Just <$> parseToken s
+  Nothing -> pure Nothing
+
+peekToken :: TreeParser r (Maybe Token)
+peekToken = lift peek >>= \case
+  Just s -> Just <$> parseToken s
+  Nothing -> pure Nothing
