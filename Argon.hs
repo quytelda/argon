@@ -9,14 +9,17 @@ import qualified Data.List                 as List
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
+-- | 'ParseTree p r' is an expression tree built from parsers of type
+-- 'p' which evaluates to a value of type 'r' supplied with the proper
+-- input.
 data ParseTree p r where
-  EmptyNode :: ParseTree p r
-  ValueNode :: r -> ParseTree p r
-  ParseNode :: p r -> ParseTree p r
-  MapNode :: (a -> r) -> ParseTree p a -> ParseTree p r
-  ProdNode :: (u -> v -> r) -> ParseTree p u -> ParseTree p v -> ParseTree p r
-  SumNode :: ParseTree p r -> ParseTree p r -> ParseTree p r
-  ManyNode :: ParseTree p r -> ParseTree p [r]
+  EmptyNode :: ParseTree p r -- ^ Terminal node with no value
+  ValueNode :: r -> ParseTree p r -- ^ Terminal node with a resolved value
+  ParseNode :: p r -> ParseTree p r -- ^ A parser awaiting input
+  MapNode :: (a -> r) -> ParseTree p a -> ParseTree p r -- ^ Abstracts fmap
+  ProdNode :: (u -> v -> r) -> ParseTree p u -> ParseTree p v -> ParseTree p r -- ^ Abstracts liftA2
+  SumNode :: ParseTree p r -> ParseTree p r -> ParseTree p r -- ^ Abstracts (<|>)
+  ManyNode :: ParseTree p r -> ParseTree p [r] -- ^ Abstracts many
 
 instance Functor (ParseTree p) where
   fmap f = MapNode f
