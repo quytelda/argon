@@ -9,22 +9,23 @@ import qualified Data.List                 as List
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
-data ParseTree r where
-  EmptyNode :: ParseTree r
-  ValueNode :: r -> ParseTree r
-  MapNode :: (a -> r) -> ParseTree a -> ParseTree r
-  ProdNode :: (u -> v -> r) -> ParseTree u -> ParseTree v -> ParseTree r
-  SumNode :: ParseTree r -> ParseTree r -> ParseTree r
-  ManyNode :: ParseTree r -> ParseTree [r]
+data ParseTree p r where
+  EmptyNode :: ParseTree p r
+  ValueNode :: r -> ParseTree p r
+  ParseNode :: p r -> ParseTree p r
+  MapNode :: (a -> r) -> ParseTree p a -> ParseTree p r
+  ProdNode :: (u -> v -> r) -> ParseTree p u -> ParseTree p v -> ParseTree p r
+  SumNode :: ParseTree p r -> ParseTree p r -> ParseTree p r
+  ManyNode :: ParseTree p r -> ParseTree p [r]
 
-instance Functor ParseTree where
+instance Functor (ParseTree p) where
   fmap f = MapNode f
 
-instance Applicative ParseTree where
+instance Applicative (ParseTree p) where
   pure = ValueNode
   liftA2 = ProdNode
 
-instance Alternative ParseTree where
+instance Alternative (ParseTree p) where
   empty = EmptyNode
   (<|>) = SumNode
   many = ManyNode
@@ -32,13 +33,14 @@ instance Alternative ParseTree where
 class Resolve f where
   resolve :: f r -> Either String r
 
-instance Resolve ParseTree where
-  resolve EmptyNode         = Left "empty"
-  resolve (ValueNode value) = Right value
-  resolve (MapNode f p)     = fmap f $ resolve p
-  resolve (ProdNode f l r)  = f <$> resolve l <*> resolve r
-  resolve (SumNode l r)     = resolve l <> resolve r
-  resolve (ManyNode p)      = Right []
+instance Resolve p => Resolve (ParseTree p) where
+  resolve EmptyNode          = Left "empty"
+  resolve (ValueNode value)  = Right value
+  resolve (ParseNode parser) = resolve parser
+  resolve (MapNode f p)      = fmap f $ resolve p
+  resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
+  resolve (SumNode l r)      = resolve l <> resolve r
+  resolve (ManyNode p)       = Right []
 
 --------------------------------------------------------------------------------
 
@@ -50,7 +52,7 @@ data Token
 class Accepts a where
   accepts :: a -> Token -> Bool
 
-instance Accepts (ParseTree a) where
+instance Accepts (ParseTree p a) where
   accepts (MapNode _ p) token    = accepts p token
   accepts (ProdNode _ l r) token = accepts l token || accepts r token
   accepts (SumNode l r) token    = accepts l token || accepts r token
@@ -72,25 +74,25 @@ pop = state $ \case
 peek :: Stream (Maybe Text)
 peek = gets $ fmap fst . List.uncons
 
-type TreeParser r = StateT (ParseTree r) Stream
+type TreeParser p r = StateT (ParseTree p r) Stream
 
-runTreeParser :: TreeParser r a -> ParseTree r -> [Text] -> ((a, ParseTree r), [Text])
+runTreeParser :: TreeParser p r a -> ParseTree p r -> [Text] -> ((a, ParseTree p r), [Text])
 runTreeParser action = runState . runStateT action
 
 -- | Execute a TreeParser computation on a different tree.
-withTree :: TreeParser v a -> ParseTree v -> TreeParser r (a, ParseTree v)
+withTree :: TreeParser p v a -> ParseTree p v -> TreeParser p r (a, ParseTree p v)
 withTree action = lift . runStateT action
 
-parseToken :: Text -> TreeParser r Token
+parseToken :: Text -> TreeParser p r Token
 parseToken (T.stripPrefix "--" -> Just name) = pure $ LongOption name
 parseToken content                           = pure $ Argument content
 
-popToken :: TreeParser r (Maybe Token)
+popToken :: TreeParser p r (Maybe Token)
 popToken = lift pop >>= \case
   Just s -> Just <$> parseToken s
   Nothing -> pure Nothing
 
-peekToken :: TreeParser r (Maybe Token)
+peekToken :: TreeParser p r (Maybe Token)
 peekToken = lift peek >>= \case
   Just s -> Just <$> parseToken s
   Nothing -> pure Nothing
