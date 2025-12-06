@@ -40,6 +40,23 @@ instance Resolve ParseTree where
 
 --------------------------------------------------------------------------------
 
+data Token
+  = LongOption Text
+  | Argument Text
+  deriving (Show)
+
+class Accepts a where
+  accepts :: a -> Token -> Bool
+
+instance Accepts (ParseTree a) where
+  accepts (MapNode _ p) token    = accepts p token
+  accepts (ProdNode _ l r) token = accepts l token || accepts r token
+  accepts (SumNode l r) token    = accepts l token || accepts r token
+  accepts (ManyNode p) token     = accepts p token
+  accepts _ _                    = False
+
+--------------------------------------------------------------------------------
+
 type Stream = State [Text]
 
 runStream :: Stream a -> [Text] -> (a, [Text])
