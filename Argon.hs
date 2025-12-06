@@ -1,8 +1,11 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs      #-}
+{-# LANGUAGE LambdaCase #-}
 
 import           Control.Applicative
-import           Data.Text           (Text)
-import qualified Data.Text           as T
+import           Control.Monad.Trans.State
+import qualified Data.List                 as List
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 
 data ParseTree r where
   EmptyNode :: ParseTree r
@@ -34,3 +37,18 @@ instance Resolve ParseTree where
   resolve (ProdNode f l r)  = f <$> resolve l <*> resolve r
   resolve (SumNode l r)     = resolve l <> resolve r
   resolve (ManyNode p)      = Right []
+
+--------------------------------------------------------------------------------
+
+type Stream = State [Text]
+
+runStream :: Stream a -> [Text] -> (a, [Text])
+runStream = runState
+
+pop :: Stream (Maybe Text)
+pop = state $ \case
+  [] -> (Nothing, [])
+  (x:xs) -> (Just x, xs)
+
+peek :: Stream (Maybe Text)
+peek = gets $ fmap fst . List.uncons
