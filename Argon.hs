@@ -1,7 +1,9 @@
-{-# LANGUAGE GADTs      #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE GADTs        #-}
+{-# LANGUAGE LambdaCase   #-}
+{-# LANGUAGE ViewPatterns #-}
 
 import           Control.Applicative
+import           Control.Monad.Trans
 import           Control.Monad.Trans.State
 import qualified Data.List                 as List
 import           Data.Text                 (Text)
@@ -69,3 +71,12 @@ pop = state $ \case
 
 peek :: Stream (Maybe Text)
 peek = gets $ fmap fst . List.uncons
+
+type TreeParser r = StateT (ParseTree r) Stream
+
+runTreeParser :: TreeParser r a -> ParseTree r -> [Text] -> ((a, ParseTree r), [Text])
+runTreeParser action = runState . runStateT action
+
+-- | Execute a TreeParser computation on a different tree.
+withTree :: TreeParser v a -> ParseTree v -> TreeParser r (a, ParseTree v)
+withTree action = lift . runStateT action
