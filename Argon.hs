@@ -71,10 +71,15 @@ push s = modify' (s:)
 --------------------------------------------------------------------------------
 
 data ParserResult p r
-  = Done r
+  = Empty
   | Partial (p r)
-  | Empty
+  | Done r
   deriving (Functor)
+
+mapParser :: (p r -> q r) -> ParserResult p r -> ParserResult q r
+mapParser f Empty            = Empty
+mapParser f (Done r)         = Done r
+mapParser f (Partial parser) = Partial $ f parser
 
 -- | A type class for anything that can be a parsing node in a
 -- 'ParseTree'.
