@@ -44,3 +44,22 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
   resolve (SumNode l r)      = resolve l <> resolve r
   resolve (ManyNode p)       = Right []
+
+--------------------------------------------------------------------------------
+-- Stream Monad
+
+type Stream = State [Text]
+
+runStream :: Stream a -> [Text] -> (a, [Text])
+runStream = runState
+
+pop :: Stream (Maybe Text)
+pop = state $ \case
+  [] -> (Nothing, [])
+  (x:xs) -> (Just x, xs)
+
+peek :: Stream (Maybe Text)
+peek = gets $ fmap fst . List.uncons
+
+push :: Text -> Stream ()
+push s = modify' (s:)
