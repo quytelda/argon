@@ -65,16 +65,29 @@ push :: Text -> Stream ()
 push s = modify' (s:)
 
 --------------------------------------------------------------------------------
+
+data ParserResult p r
+  = Done r
+  | Partial (p r)
+  | Empty
+  deriving (Functor)
+
+-- | A type class for anything that can be a parsing node in a
+-- 'ParseTree'.
+class Parser p where
+  feedParser :: p r -> Stream (ParserResult p r)
+
+--------------------------------------------------------------------------------
 -- Feeding the Tree
 
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with
 -- an updated subtree and further traversal ceases.
-feed :: ParseTree p r -> Stream (Maybe (ParseTree p r))
+feed :: Parser p => ParseTree p r -> Stream (Maybe (ParseTree p r))
 feed = undefined
 
 -- | Repeatedly feed input to the tree using `feed` until either no
 -- input is consumed after traversal (e.g. `feed` returns Nothing), or
 -- no input remains.
-consume :: ParseTree p r -> Stream (ParseTree p r)
+consume :: Parser p => ParseTree p r -> Stream (ParseTree p r)
 consume = undefined
