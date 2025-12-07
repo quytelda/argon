@@ -63,3 +63,18 @@ peek = gets $ fmap fst . List.uncons
 
 push :: Text -> Stream ()
 push s = modify' (s:)
+
+--------------------------------------------------------------------------------
+-- Feeding the Tree
+
+-- | 'feed' traverses the tree until it activates a parser that
+-- consumes input. Once a subtree consumes input, it is replaced with
+-- an updated subtree and further traversal ceases.
+feed :: ParseTree p r -> Stream (Maybe (ParseTree p r))
+feed = undefined
+
+-- | Repeatedly feed input to the tree using `feed` until either no
+-- input is consumed after traversal (e.g. `feed` returns Nothing), or
+-- no input remains.
+consume :: ParseTree p r -> Stream (ParseTree p r)
+consume = undefined
