@@ -4,6 +4,7 @@
 
 import           Control.Applicative
 import           Control.Monad.Trans
+import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.State
 import qualified Data.List                 as List
 import           Data.Text                 (Text)
@@ -83,42 +84,31 @@ class Parser p where
 --------------------------------------------------------------------------------
 -- Feeding the Tree
 
-noChange :: Stream (Maybe a)
-noChange = pure Nothing
-
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with
 -- an updated subtree and further traversal ceases.
-feed :: Parser p => ParseTree p r -> Stream (Maybe (ParseTree p r))
-feed EmptyNode = noChange
-feed (ValueNode _) = noChange
-feed (ParseNode parser) = feedParser parser >>= \case
-  Done value      -> pure $ Just $ ValueNode value
-  Partial parser' -> pure $ Just $ ParseNode parser'
-  Empty -> noChange
-feed (MapNode f tree) = feed tree >>= \case
-  Just tree' -> pure $ Just $ MapNode f tree'
-  Nothing    -> noChange
-feed (ProdNode f l r) = feed l >>= \case
-  Just l' -> pure $ Just $ ProdNode f l' r
-  Nothing -> feed r >>= \case
-    Just r' -> pure $ Just $ ProdNode f l r'
-    Nothing -> noChange
-feed (SumNode l r) = feed l >>= \case
-  Just l' -> pure $ Just $ SumNode l' r
-  Nothing -> feed r >>= \case
-    Just r' -> pure $ Just $ SumNode l r'
-    Nothing -> noChange
-feed (ManyNode tree) = feed tree >>= \case
-  Just tree' -> pure $ Just $ ProdNode (:) tree' (ManyNode tree)
-  Nothing -> noChange
+feed :: Parser p => ParseTree p r -> MaybeT Stream (ParseTree p r)
+feed EmptyNode = empty
+feed (ValueNode _) = empty
+feed (ParseNode parser) = lift (feedParser parser) >>= \case
+  Done value      -> pure $ ValueNode value
+  Partial parser' -> pure $ ParseNode parser'
+  Empty -> empty
+feed (MapNode f tree) = MapNode f <$> feed tree
+feed (ProdNode f l r) =
+  (ProdNode f <$> feed l <*> pure r) <|>
+  (ProdNode f l <$> feed r)
+feed (SumNode l r) =
+  (SumNode <$> feed l <*> pure r) <|>
+  (SumNode l <$> feed r)
+feed (ManyNode tree) = ProdNode (:) <$> feed tree <*> pure (ManyNode tree)
 
 -- | Repeatedly feed input to the tree using `feed` until either no
 -- input is consumed after traversal (e.g. `feed` returns Nothing), or
 -- no input remains.
 consume :: Parser p => ParseTree p r -> Stream (ParseTree p r)
 consume tree = do
-  result <- feed tree
+  result <- runMaybeT $ feed tree
   case result of
     Just tree' -> do
       isEmpty <- isEmptyStream
