@@ -117,4 +117,12 @@ feed (ManyNode tree) = feed tree >>= \case
 -- input is consumed after traversal (e.g. `feed` returns Nothing), or
 -- no input remains.
 consume :: Parser p => ParseTree p r -> Stream (ParseTree p r)
-consume = undefined
+consume tree = do
+  result <- feed tree
+  case result of
+    Just tree' -> do
+      isEmpty <- isEmptyStream
+      if isEmpty
+        then pure tree'
+        else consume tree'
+    _ -> pure tree
