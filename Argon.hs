@@ -53,6 +53,9 @@ type Stream = State [Text]
 runStream :: Stream a -> [Text] -> (a, [Text])
 runStream = runState
 
+isEmptyStream :: Stream Bool
+isEmptyStream = gets null
+
 pop :: Stream (Maybe Text)
 pop = state $ \case
   [] -> (Nothing, [])
