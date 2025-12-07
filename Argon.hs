@@ -80,11 +80,35 @@ class Parser p where
 --------------------------------------------------------------------------------
 -- Feeding the Tree
 
+noChange :: Stream (Maybe a)
+noChange = pure Nothing
+
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with
 -- an updated subtree and further traversal ceases.
 feed :: Parser p => ParseTree p r -> Stream (Maybe (ParseTree p r))
-feed = undefined
+feed EmptyNode = noChange
+feed (ValueNode _) = noChange
+feed (ParseNode parser) = feedParser parser >>= \case
+  Done value      -> pure $ Just $ ValueNode value
+  Partial parser' -> pure $ Just $ ParseNode parser'
+  Empty -> noChange
+feed (MapNode f tree) = feed tree >>= \case
+  Just tree' -> pure $ Just $ MapNode f tree'
+  Nothing    -> noChange
+feed (ProdNode f l r) = feed l >>= \case
+  Just l' -> pure $ Just $ ProdNode f l' r
+  Nothing -> feed r >>= \case
+    Just r' -> pure $ Just $ ProdNode f l r'
+    Nothing -> noChange
+feed (SumNode l r) = feed l >>= \case
+  Just l' -> pure $ Just $ SumNode l' r
+  Nothing -> feed r >>= \case
+    Just r' -> pure $ Just $ SumNode l r'
+    Nothing -> noChange
+feed (ManyNode tree) = feed tree >>= \case
+  Just tree' -> pure $ Just $ ProdNode (:) tree' (ManyNode tree)
+  Nothing -> noChange
 
 -- | Repeatedly feed input to the tree using `feed` until either no
 -- input is consumed after traversal (e.g. `feed` returns Nothing), or
