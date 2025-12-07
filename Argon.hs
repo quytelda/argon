@@ -6,6 +6,7 @@ import           Control.Applicative
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.State
+import           Data.Bifunctor
 import qualified Data.List                 as List
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
@@ -85,6 +86,29 @@ mapParser f (Partial parser) = Partial $ f parser
 -- 'ParseTree'.
 class Parser p where
   feedParser :: p r -> Stream (ParserResult p r)
+
+-- | A parser that accepts a plain text argument.
+data TextParser r = TextParser Text (Text -> Either String r)
+  deriving (Functor)
+
+instance Parser TextParser where
+  feedParser (TextParser hint parse) = pop >>= \case
+    Just s -> either error (pure . Done) $ parse s
+    Nothing -> error $ "expected " <> T.unpack hint <> ", got end-of-input"
+
+instance Resolve TextParser where
+  resolve (TextParser hint _) = Left $ "TextParser: expected " <> T.unpack hint
+
+-- | Parsers for top-level CLI arguments such as commands and options.
+data CliParser r
+  = CliArgument (TextParser r)
+  deriving (Functor)
+
+instance Parser CliParser where
+  feedParser (CliArgument parser) = mapParser CliArgument <$> feedParser parser
+
+instance Resolve CliParser where
+  resolve (CliArgument parser) = first ("CliParser: " <>) $ resolve parser
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
