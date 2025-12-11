@@ -117,6 +117,9 @@ class Parser p where
 data TextParser r = TextParser Text (Text -> Either String r)
   deriving (Functor)
 
+instance Valency TextParser where
+  valency _ = Unary
+
 instance Parser TextParser where
   feedParser (TextParser hint parse) = pop >>= \case
     Just s -> either error (pure . Done) $ parse s
@@ -130,6 +133,10 @@ data OptParser r
   = OptParameter (TextParser r) -- ^ A standard parameter
   | OptKey Text (TextParser r) -- ^ A key[=value] parameter
   deriving (Functor)
+
+instance Valency OptParser where
+  valency (OptParameter p) = valency p
+  valency (OptKey _ p)     = valency p
 
 instance Resolve OptParser where
   resolve (OptParameter parser) = first ("OptParameter: " <>) $ resolve parser
@@ -151,14 +158,15 @@ instance Parser OptParser where
                     pop *> either error (pure . Done) (parse v)
     _ -> pure Empty
 
-instance Valency OptParser where
-  valency _ = Unary
-
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
   = CliParameter (TextParser r)
   | CliOption Text (ParseTree OptParser r)
   deriving (Functor)
+
+instance Valency CliParser where
+  valency (CliParameter p)   = valency p
+  valency (CliOption _ tree) = valency tree
 
 instance Parser CliParser where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
