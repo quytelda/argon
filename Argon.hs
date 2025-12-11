@@ -155,12 +155,14 @@ instance Resolve OptParser where
   resolve (OptKey key parser) =
     first (\s -> "OptKey (" <> T.unpack key <> "): " <> s) $ resolve parser
 
+-- | Parse a 'Text' of the form "key=value" into ("key", "value"). If
+-- the delimiter ('=') does not appear in the string, the result is
+-- 'Nothing'.
 breakKeyValue :: Text -> Maybe (Text, Text)
 breakKeyValue s =
-  let (key, _value) = T.break (== '=') s
-  in case T.uncons _value of
-       Just (_, value) -> Just (key, value)
-       Nothing         -> Nothing
+  case T.break (== '=') s of
+    (key, T.uncons -> Just (_, value)) -> Just (key, value)
+    _                                  -> Nothing
 
 instance Parser OptParser where
   feedParser (OptParameter parser) = mapParser OptParameter <$> feedParser parser
