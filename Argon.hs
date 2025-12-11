@@ -4,6 +4,7 @@
 
 import           Control.Applicative
 import           Control.Monad
+import           Control.Monad.Except
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.State
@@ -83,10 +84,10 @@ instance Valency p => Valency (ParseTree p) where
 --------------------------------------------------------------------------------
 -- Stream Monad
 
-type Stream = State [Text]
+type Stream = StateT [Text] (Except String)
 
-runStream :: Stream a -> [Text] -> (a, [Text])
-runStream = runState
+runStream :: Stream a -> [Text] -> Either String (a, [Text])
+runStream m = runExcept . runStateT m
 
 isEmptyStream :: Stream Bool
 isEmptyStream = gets null
@@ -130,8 +131,8 @@ instance Valency TextParser where
 
 instance Parser TextParser where
   feedParser (TextParser hint parse) = pop >>= \case
-    Just s -> either error (pure . Done) $ parse s
-    Nothing -> error $ "expected " <> T.unpack hint <> ", got end-of-input"
+    Just s -> either throwError (pure . Done) $ parse s
+    Nothing -> throwError $ "expected " <> T.unpack hint <> ", got end-of-input"
 
 instance Resolve TextParser where
   resolve (TextParser hint _) = Left $ "TextParser: expected " <> T.unpack hint
@@ -163,7 +164,7 @@ instance Parser OptParser where
   feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
     Just s -> case breakKeyValue s of
       Just (k, v) | key == k ->
-                    pop *> either error (pure . Done) (parse v)
+                    pop *> either throwError (pure . Done) (parse v)
     _ -> pure Empty
 
 -- | Parsers for top-level CLI arguments such as commands and options.
@@ -189,21 +190,24 @@ instance Parser CliParser where
           -- parse the parameter, if any
           parser' <- case valency parser of
                        Multary -> pop >>= \case
-                         Nothing -> error $ "CliOption (" <> T.unpack key <> "): missing argument"
+                         Nothing -> throwError
+                           $ "CliOption ("
+                           <> T.unpack key
+                           <> "): missing argument"
                          Just s ->
-                           let args = T.split (== ',') s
-                               (res, _) = runStream (consume parser) args
-                               -- TODO: handle leftover args
-                           in pure res
+                           case runStream (consume parser) (T.split (== ',') s) of
+                             Left err -> throwError err
+                             -- TODO: handle leftover args
+                             Right (res, _) -> pure res
                        _ -> consume parser
 
-          either error (pure . Done) $ resolve parser'
+          either throwError (pure . Done) $ resolve parser'
     _ -> pure Empty
   feedParser (CliCommand cmd tree) = peek >>= \case
     Just s | cmd == s ->
              pop -- consume command
              *> consume tree
-             >>= either error (pure . Done) . resolve
+             >>= either throwError (pure . Done) . resolve
     _ -> pure Empty
 
 instance Resolve CliParser where
