@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs           #-}
 {-# LANGUAGE LambdaCase      #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ViewPatterns    #-}
 
