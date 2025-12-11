@@ -228,7 +228,7 @@ instance Parser OptParser where
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
   = CliParameter (TextParser r) -- ^ A simple parameter
-  | CliOption Text (ParseTree OptParser r) -- ^ An option (e.g. '--option')
+  | CliOption OptionInfo (ParseTree OptParser r) -- ^ An option (e.g. '--option')
   | CliCommand Text (ParseTree CliParser r) -- ^ A subcommand
   deriving (Functor)
 
@@ -239,9 +239,8 @@ instance Valency CliParser where
 
 instance Parser CliParser where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
-  feedParser (CliOption key parser) = peek >>= \case
-    Just (T.stripPrefix "--" -> Just k)
-      | key == k -> do
+  feedParser (CliOption info parser) = peek >>= \case
+    Just s | info `accepts` s -> do
           -- consume option flag
           void pop
 
@@ -251,7 +250,7 @@ instance Parser CliParser where
                   Multary -> pop >>= \case
                     Nothing -> throwError
                       $ "CliOption ("
-                      <> T.unpack key
+                      <> show (optHead info)
                       <> "): missing argument"
                     Just s ->
                       case runStream (consume parser) (T.split (== ',') s) of
@@ -269,7 +268,7 @@ instance Parser CliParser where
 
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
-  resolve (CliOption key _)     = throwError $ "CliOption (" <> T.unpack key <> ")"
+  resolve (CliOption info _)    = throwError $ "CliOption (" <> show (optHead info) <> ")"
   resolve (CliCommand cmd _)    = throwError $ "CliCommand (" <> T.unpack cmd <> ")"
 
 --------------------------------------------------------------------------------
