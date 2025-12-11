@@ -48,6 +48,30 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve (ManyNode p)       = Right []
 
 --------------------------------------------------------------------------------
+-- Valency
+
+data Arity = Nullary | Unary | Multary
+  deriving (Eq, Show, Ord)
+
+instance Semigroup Arity where
+  Nullary <> Nullary = Nullary
+  Nullary <> Unary   = Unary
+  Unary   <> Nullary = Unary
+  _       <> _       = Multary
+
+class Valency p where
+  valency :: p r -> Arity
+
+instance Valency p => Valency (ParseTree p) where
+  valency EmptyNode        = Nullary
+  valency (ValueNode _)    = Nullary
+  valency (ParseNode _)    = Unary
+  valency (MapNode _ p)    = valency p
+  valency (ProdNode _ l r) = valency l <> valency r
+  valency (SumNode l r)    = max (valency l) (valency r)
+  valency (ManyNode _)     = Multary
+
+--------------------------------------------------------------------------------
 -- Stream Monad
 
 type Stream = State [Text]
@@ -100,25 +124,6 @@ instance Parser TextParser where
 instance Resolve TextParser where
   resolve (TextParser hint _) = Left $ "TextParser: expected " <> T.unpack hint
 
-data ArityClass = Zero | One | Many
-  deriving (Eq, Show)
-
-instance Enum ArityClass where
-  toEnum n
-    | n <= 0 = Zero
-    | n == 1 = One
-    | otherwise = Many
-
-  fromEnum Zero = 0
-  fromEnum One  = 1
-  fromEnum Many = 2
-
-instance Ord ArityClass where
-  compare x y = compare (fromEnum x) (fromEnum y)
-
-class Complexity p where
-  complexity :: p r -> ArityClass
-
 -- | Parsers for the argument of an option, i.e. '--option key=value'.
 data OptParser r
   = OptParameter (TextParser r) -- ^ A standard parameter
@@ -129,15 +134,6 @@ instance Resolve OptParser where
   resolve (OptParameter parser) = first ("OptParameter: " <>) $ resolve parser
   resolve (OptKey key parser) =
     first (\s -> "OptKey (" <> T.unpack key <> "): " <> s) $ resolve parser
-
-instance Complexity (ParseTree OptParser) where
-  complexity EmptyNode = Zero
-  complexity (ValueNode _) = Zero
-  complexity (ParseNode _) = One
-  complexity (MapNode _ p) = complexity p
-  complexity (ProdNode _ l r) = toEnum $ fromEnum (complexity l) + fromEnum (complexity r)
-  complexity (SumNode l r) = max (complexity l) (complexity r)
-  complexity (ManyNode _) = Many
 
 breakKeyValue :: Text -> Maybe (Text, Text)
 breakKeyValue s =
@@ -154,6 +150,9 @@ instance Parser OptParser where
                     pop *> either error (pure . Done) (parse v)
     _ -> pure Empty
 
+instance Valency OptParser where
+  valency _ = Unary
+
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
   = CliParameter (TextParser r)
@@ -164,16 +163,16 @@ instance Parser CliParser where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
   feedParser (CliOption key parser) = peek >>= \case
     Just (T.stripPrefix "--" -> Just k)
-      | key == k -> pop *> case complexity parser of
-          Many -> do input <- pop >>= maybe (error "missing parameter") pure
-                     let args = T.split (== ',') input
-                         (parser', args') = runStream (consume parser) args
-                     case resolve parser' of
-                       Left err -> error err
-                       Right value -> pure $ Done value
+      | key == k -> pop *> case valency parser of
+          Multary -> do input <- pop >>= maybe (error "missing parameter") pure
+                        let args = T.split (== ',') input
+                            (parser', args') = runStream (consume parser) args
+                        case resolve parser' of
+                          Left err    -> error err
+                          Right value -> pure $ Done value
           _    -> do parser' <- consume parser
                      case resolve parser' of
-                       Left err -> error err
+                       Left err    -> error err
                        Right value -> pure $ Done value
     Nothing -> pure Empty
 
