@@ -3,6 +3,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 import           Control.Applicative
+import           Control.Monad
 import           Control.Monad.Trans
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.State
@@ -163,21 +164,27 @@ instance Parser CliParser where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
   feedParser (CliOption key parser) = peek >>= \case
     Just (T.stripPrefix "--" -> Just k)
-      | key == k -> pop *> case valency parser of
-          Multary -> do input <- pop >>= maybe (error "missing parameter") pure
-                        let args = T.split (== ',') input
-                            (parser', args') = runStream (consume parser) args
-                        case resolve parser' of
-                          Left err    -> error err
-                          Right value -> pure $ Done value
-          _    -> do parser' <- consume parser
-                     case resolve parser' of
-                       Left err    -> error err
-                       Right value -> pure $ Done value
+      | key == k -> do
+          -- consume option flag
+          void pop
+
+          -- parse the parameter, if any
+          parser' <- case valency parser of
+                       Multary -> pop >>= \case
+                         Nothing -> error $ "CliOption (" <> T.unpack key <> "): missing argument"
+                         Just s ->
+                           let args = T.split (== ',') s
+                               (res, _) = runStream (consume parser) args
+                               -- TODO: handle leftover args
+                           in pure res
+                       _ -> consume parser
+
+          either error (pure . Done) $ resolve parser'
     Nothing -> pure Empty
 
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
+  resolve (CliOption key parser) = first (\s -> "CliOption (" <> T.unpack key <> "): " <> s) $ resolve parser
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
