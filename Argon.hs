@@ -166,8 +166,9 @@ data CliParser r
   deriving (Functor)
 
 instance Valency CliParser where
-  valency (CliParameter p)   = valency p
-  valency (CliOption _ tree) = valency tree
+  valency (CliParameter p)    = valency p
+  valency (CliOption _ tree)  = Unary <> valency tree
+  valency (CliCommand _ tree) = Unary <> valency tree
 
 instance Parser CliParser where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
@@ -191,19 +192,16 @@ instance Parser CliParser where
           either error (pure . Done) $ resolve parser'
     _ -> pure Empty
   feedParser (CliCommand cmd tree) = peek >>= \case
-    Just s | cmd == s -> do
-               -- consume command
-               void pop
-
-               -- run subparser
-               tree' <- consume tree
-               either error (pure . Done) $ resolve tree'
+    Just s | cmd == s ->
+             pop -- consume command
+             *> consume tree
+             >>= either error (pure . Done) . resolve
     _ -> pure Empty
 
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
-  resolve (CliOption key _) = Left $ "CliOption (" <> T.unpack key <> ")"
-  resolve (CliCommand cmd _) = Left $ "CliCommand (" <> T.unpack cmd <> ")"
+  resolve (CliOption key _)     = Left $ "CliOption (" <> T.unpack key <> ")"
+  resolve (CliCommand cmd _)    = Left $ "CliCommand (" <> T.unpack cmd <> ")"
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
