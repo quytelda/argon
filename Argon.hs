@@ -162,6 +162,7 @@ instance Parser OptParser where
 data CliParser r
   = CliParameter (TextParser r)
   | CliOption Text (ParseTree OptParser r)
+  | CliCommand Text (ParseTree CliParser r)
   deriving (Functor)
 
 instance Valency CliParser where
@@ -189,10 +190,20 @@ instance Parser CliParser where
 
           either error (pure . Done) $ resolve parser'
     _ -> pure Empty
+  feedParser (CliCommand cmd tree) = peek >>= \case
+    Just s | cmd == s -> do
+               -- consume command
+               void pop
+
+               -- run subparser
+               tree' <- consume tree
+               either error (pure . Done) $ resolve tree'
+    _ -> pure Empty
 
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
   resolve (CliOption key _) = Left $ "CliOption (" <> T.unpack key <> ")"
+  resolve (CliCommand cmd _) = Left $ "CliCommand (" <> T.unpack cmd <> ")"
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
