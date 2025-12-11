@@ -192,7 +192,7 @@ instance Parser CliParser where
 
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
-  resolve (CliOption key parser) = first (\s -> "CliOption (" <> T.unpack key <> "): " <> s) $ resolve parser
+  resolve (CliOption key _) = Left $ "CliOption (" <> T.unpack key <> ")"
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
