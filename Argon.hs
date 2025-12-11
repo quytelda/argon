@@ -11,6 +11,7 @@ import           Control.Monad.Trans
 import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.State
 import           Data.Bifunctor
+import           Data.Functor
 import qualified Data.List                 as List
 import           Data.List.NonEmpty        (NonEmpty)
 import qualified Data.List.NonEmpty        as NonEmpty
@@ -186,17 +187,20 @@ instance Resolve TextParser where
 -- | Parsers for the argument of an option, i.e. '--option key=value'.
 data OptParser r
   = OptParameter (TextParser r) -- ^ A standard parameter
-  | OptKey Text (TextParser r) -- ^ A key[=value] parameter
+  | OptKey Text (TextParser r) -- ^ A key=value parameter
+  | OptSwitch Text r -- ^ A switch is either present or absent
   deriving (Functor)
 
 instance Valency OptParser where
   valency (OptParameter p) = valency p
   valency (OptKey _ p)     = valency p
+  valency (OptSwitch _ _)  = Unary
 
 instance Resolve OptParser where
   resolve (OptParameter parser) = first ("OptParameter: " <>) $ resolve parser
   resolve (OptKey key parser) =
     first (\s -> "OptKey (" <> T.unpack key <> "): " <> s) $ resolve parser
+  resolve (OptSwitch name _) = throwError $ "OptSwitch: " <> T.unpack name
 
 -- | Parse a 'Text' of the form "key=value" into ("key", "value"). If
 -- the delimiter ('=') does not appear in the string, the result is
@@ -210,9 +214,11 @@ breakKeyValue s =
 instance Parser OptParser where
   feedParser (OptParameter parser) = mapParser OptParameter <$> feedParser parser
   feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
-    Just s -> case breakKeyValue s of
-      Just (k, v) | key == k ->
-                    pop *> eitherToResult (parse v)
+    Just (breakKeyValue -> Just (k, v))
+      | key == k -> pop *> eitherToResult (parse v)
+    _ -> pure Empty
+  feedParser (OptSwitch key present) = peek >>= \case
+    Just s | key == s -> pop $> Done present
     _ -> pure Empty
 
 -- | Parsers for top-level CLI arguments such as commands and options.
