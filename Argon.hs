@@ -43,13 +43,13 @@ class Resolve f where
   resolve :: f r -> Either String r
 
 instance Resolve p => Resolve (ParseTree p) where
-  resolve EmptyNode          = Left "empty"
-  resolve (ValueNode value)  = Right value
+  resolve EmptyNode          = throwError "empty"
+  resolve (ValueNode value)  = pure value
   resolve (ParseNode parser) = resolve parser
   resolve (MapNode f p)      = fmap f $ resolve p
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
   resolve (SumNode l r)      = resolve l <> resolve r
-  resolve (ManyNode p)       = Right []
+  resolve (ManyNode p)       = pure []
 
 --------------------------------------------------------------------------------
 -- Valency
@@ -138,7 +138,8 @@ instance Parser TextParser where
     Nothing -> throwError $ "expected " <> T.unpack hint <> ", got end-of-input"
 
 instance Resolve TextParser where
-  resolve (TextParser hint _) = Left $ "TextParser: expected " <> T.unpack hint
+  resolve (TextParser hint _) =
+    throwError $ "TextParser: expected " <> T.unpack hint
 
 -- | Parsers for the argument of an option, i.e. '--option key=value'.
 data OptParser r
@@ -202,7 +203,7 @@ instance Parser CliParser where
                       <> "): missing argument"
                     Just s ->
                       case runStream (consume parser) (T.split (== ',') s) of
-                        Left err -> throwError err
+                        Left err       -> throwError err
                         -- TODO: handle leftover args
                         Right (res, _) -> pure res
                   _ -> consume parser
@@ -216,8 +217,8 @@ instance Parser CliParser where
 
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
-  resolve (CliOption key _)     = Left $ "CliOption (" <> T.unpack key <> ")"
-  resolve (CliCommand cmd _)    = Left $ "CliCommand (" <> T.unpack cmd <> ")"
+  resolve (CliOption key _)     = throwError $ "CliOption (" <> T.unpack key <> ")"
+  resolve (CliCommand cmd _)    = throwError $ "CliCommand (" <> T.unpack cmd <> ")"
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
