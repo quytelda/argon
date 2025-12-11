@@ -1,6 +1,7 @@
-{-# LANGUAGE GADTs        #-}
-{-# LANGUAGE LambdaCase   #-}
-{-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE GADTs           #-}
+{-# LANGUAGE LambdaCase      #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ViewPatterns    #-}
 
 import           Control.Applicative
 import           Control.Monad
@@ -107,6 +108,9 @@ push s = modify' (s:)
 
 --------------------------------------------------------------------------------
 
+class Accepts a where
+  accepts :: a -> Text -> Bool
+
 data Flag
   = LongOption Text
   | ShortOption Char
@@ -128,18 +132,28 @@ data OptionInfo = OptionInfo
   , optHelp  :: Text
   } deriving (Show)
 
+instance Accepts OptionInfo where
+  accepts OptionInfo{..} (T.stripPrefix "--" -> Just s) =
+    LongOption s `elem` optFlags
+  accepts OptionInfo{..} (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) =
+    ShortOption c `elem` optFlags
+  accepts _ _ = False
+
 optHead :: OptionInfo -> Flag
 optHead info = NonEmpty.head $ optFlags info
 
 type Commands = NonEmpty Text
 
-data CommandInfo = CommandInfo
-  { cmdNames :: Commands
-  , cmdHelp :: Text
-  } deriving (Show)
-
 command :: Text -> Commands
 command = NonEmpty.singleton
+
+data CommandInfo = CommandInfo
+  { cmdNames :: Commands
+  , cmdHelp  :: Text
+  } deriving (Show)
+
+instance Accepts CommandInfo where
+  accepts CommandInfo{..} s = s `elem` cmdNames
 
 --------------------------------------------------------------------------------
 
