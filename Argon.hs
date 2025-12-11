@@ -71,10 +71,11 @@ push s = modify' (s:)
 
 --------------------------------------------------------------------------------
 
+-- | The result of attempting to activate a parser
 data ParserResult p r
-  = Empty
-  | Partial (p r)
-  | Done r
+  = Empty -- ^ The parser consumed no input (i.e. does not apply)
+  | Partial (p r) -- ^ The parser consumed input and requires more
+  | Done r -- ^ The parser consumed input and completed
   deriving (Functor)
 
 mapParser :: (p r -> q r) -> ParserResult p r -> ParserResult q r
@@ -87,7 +88,7 @@ mapParser f (Partial parser) = Partial $ f parser
 class Parser p where
   feedParser :: p r -> Stream (ParserResult p r)
 
--- | A parser that accepts a plain text argument.
+-- | A parser that accepts a simple text argument.
 data TextParser r = TextParser Text (Text -> Either String r)
   deriving (Functor)
 
