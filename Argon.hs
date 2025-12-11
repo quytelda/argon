@@ -36,6 +36,8 @@ instance Alternative (ParseTree p) where
   (<|>) = SumNode
   many = ManyNode
 
+-- | Things that can be resolved to a value, but might fail to
+-- resolve.
 class Resolve f where
   resolve :: f r -> Either String r
 
@@ -51,6 +53,10 @@ instance Resolve p => Resolve (ParseTree p) where
 --------------------------------------------------------------------------------
 -- Valency
 
+-- | 'Arity' represents the number of input a parser-like object might
+-- consume. We only care about three classes: 'Nullary' parsers
+-- consume no input, 'Unary' parsers consume up to one input, and
+-- 'Multary' parsers can potentially consume two or more inputs.
 data Arity = Nullary | Unary | Multary
   deriving (Eq, Show, Ord)
 
@@ -60,6 +66,8 @@ instance Semigroup Arity where
   Unary   <> Nullary = Unary
   _       <> _       = Multary
 
+-- | Parser-like objects that can be analyzed to determine
+-- valency/arity.
 class Valency p where
   valency :: p r -> Arity
 
@@ -160,9 +168,9 @@ instance Parser OptParser where
 
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
-  = CliParameter (TextParser r)
-  | CliOption Text (ParseTree OptParser r)
-  | CliCommand Text (ParseTree CliParser r)
+  = CliParameter (TextParser r) -- ^ A simple parameter
+  | CliOption Text (ParseTree OptParser r) -- ^ An option (e.g. '--option')
+  | CliCommand Text (ParseTree CliParser r) -- ^ A subcommand
   deriving (Functor)
 
 instance Valency CliParser where
