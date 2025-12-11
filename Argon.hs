@@ -237,7 +237,10 @@ feed (ProdNode f l r) =
 feed (SumNode l r) =
   (SumNode <$> feed l <*> pure r) <|>
   (SumNode l <$> feed r)
-feed (ManyNode tree) = ProdNode (:) <$> feed tree <*> pure (ManyNode tree)
+feed (ManyNode tree) =
+  ProdNode (:)
+  <$> feed tree
+  <*> pure (ManyNode tree)
 
 -- | Repeatedly feed input to the tree using `feed` until either no
 -- input is consumed after traversal (e.g. `feed` returns Nothing), or
