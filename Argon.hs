@@ -10,6 +10,8 @@ import           Control.Monad.Trans.Maybe
 import           Control.Monad.Trans.State
 import           Data.Bifunctor
 import qualified Data.List                 as List
+import           Data.List.NonEmpty        (NonEmpty)
+import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
@@ -102,6 +104,42 @@ peek = gets $ fmap fst . List.uncons
 
 push :: Text -> Stream ()
 push s = modify' (s:)
+
+--------------------------------------------------------------------------------
+
+data Flag
+  = LongOption Text
+  | ShortOption Char
+  deriving (Eq, Show)
+
+type Flags = NonEmpty Flag
+
+class ToFlag a where
+  flag :: a -> Flags
+
+instance ToFlag Char where
+  flag = NonEmpty.singleton . ShortOption
+
+instance ToFlag Text where
+  flag = NonEmpty.singleton . LongOption
+
+data OptionInfo = OptionInfo
+  { optFlags :: Flags
+  , optHelp  :: Text
+  } deriving (Show)
+
+optHead :: OptionInfo -> Flag
+optHead info = NonEmpty.head $ optFlags info
+
+type Commands = NonEmpty Text
+
+data CommandInfo = CommandInfo
+  { cmdNames :: Commands
+  , cmdHelp :: Text
+  } deriving (Show)
+
+command :: Text -> Commands
+command = NonEmpty.singleton
 
 --------------------------------------------------------------------------------
 
