@@ -141,6 +141,9 @@ data CommandInfo = CommandInfo
 instance Accepts CommandInfo where
   accepts CommandInfo{..} s = s `elem` cmdNames
 
+cmdHead :: CommandInfo -> Text
+cmdHead = NonEmpty.head . cmdNames
+
 --------------------------------------------------------------------------------
 
 -- | The result of attempting to activate a parser
@@ -215,7 +218,7 @@ instance Parser OptParser where
 data CliParser r
   = CliParameter (TextParser r) -- ^ A simple parameter
   | CliOption OptionInfo (ParseTree OptParser r) -- ^ An option (e.g. '--option')
-  | CliCommand Text (ParseTree CliParser r) -- ^ A subcommand
+  | CliCommand CommandInfo (ParseTree CliParser r) -- ^ A subcommand
   deriving (Functor)
 
 instance Valency CliParser where
@@ -245,8 +248,8 @@ instance Parser CliParser where
                         Right (res, _) -> pure res
                   _ -> consume parser
     _ -> pure Empty
-  feedParser (CliCommand cmd tree) = peek >>= \case
-    Just s | cmd == s ->
+  feedParser (CliCommand info tree) = peek >>= \case
+    Just s | info `accepts` s ->
              pop -- consume command
              *> consume tree
              >>= eitherToResult . resolve
@@ -255,7 +258,7 @@ instance Parser CliParser where
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
   resolve (CliOption info _)    = throwError $ "CliOption (" <> show (optHead info) <> ")"
-  resolve (CliCommand cmd _)    = throwError $ "CliCommand (" <> T.unpack cmd <> ")"
+  resolve (CliCommand info _)   = throwError $ "CliCommand (" <> show (cmdHead info) <> ")"
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
