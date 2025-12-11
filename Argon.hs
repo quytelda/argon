@@ -188,7 +188,7 @@ instance Parser CliParser where
                        _ -> consume parser
 
           either error (pure . Done) $ resolve parser'
-    Nothing -> pure Empty
+    _ -> pure Empty
 
 instance Resolve CliParser where
   resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
