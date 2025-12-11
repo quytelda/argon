@@ -100,16 +100,85 @@ instance Parser TextParser where
 instance Resolve TextParser where
   resolve (TextParser hint _) = Left $ "TextParser: expected " <> T.unpack hint
 
+data ArityClass = Zero | One | Many
+  deriving (Eq, Show)
+
+instance Enum ArityClass where
+  toEnum n
+    | n <= 0 = Zero
+    | n == 1 = One
+    | otherwise = Many
+
+  fromEnum Zero = 0
+  fromEnum One  = 1
+  fromEnum Many = 2
+
+instance Ord ArityClass where
+  compare x y = compare (fromEnum x) (fromEnum y)
+
+class Complexity p where
+  complexity :: p r -> ArityClass
+
+-- | Parsers for the argument of an option, i.e. '--option key=value'.
+data OptParser r
+  = OptParameter (TextParser r) -- ^ A standard parameter
+  | OptKey Text (TextParser r) -- ^ A key[=value] parameter
+  deriving (Functor)
+
+instance Resolve OptParser where
+  resolve (OptParameter parser) = first ("OptParameter: " <>) $ resolve parser
+  resolve (OptKey key parser) =
+    first (\s -> "OptKey (" <> T.unpack key <> "): " <> s) $ resolve parser
+
+instance Complexity (ParseTree OptParser) where
+  complexity EmptyNode = Zero
+  complexity (ValueNode _) = Zero
+  complexity (ParseNode _) = One
+  complexity (MapNode _ p) = complexity p
+  complexity (ProdNode _ l r) = toEnum $ fromEnum (complexity l) + fromEnum (complexity r)
+  complexity (SumNode l r) = max (complexity l) (complexity r)
+  complexity (ManyNode _) = Many
+
+breakKeyValue :: Text -> Maybe (Text, Text)
+breakKeyValue s =
+  let (key, _value) = T.break (== '=') s
+  in case T.uncons _value of
+       Just (_, value) -> Just (key, value)
+       Nothing         -> Nothing
+
+instance Parser OptParser where
+  feedParser (OptParameter parser) = mapParser OptParameter <$> feedParser parser
+  feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
+    Just s -> case breakKeyValue s of
+      Just (k, v) | key == k ->
+                    pop *> either error (pure . Done) (parse v)
+    _ -> pure Empty
+
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
-  = CliArgument (TextParser r)
+  = CliParameter (TextParser r)
+  | CliOption Text (ParseTree OptParser r)
   deriving (Functor)
 
 instance Parser CliParser where
-  feedParser (CliArgument parser) = mapParser CliArgument <$> feedParser parser
+  feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
+  feedParser (CliOption key parser) = peek >>= \case
+    Just (T.stripPrefix "--" -> Just k)
+      | key == k -> pop *> case complexity parser of
+          Many -> do input <- pop >>= maybe (error "missing parameter") pure
+                     let args = T.split (== ',') input
+                         (parser', args') = runStream (consume parser) args
+                     case resolve parser' of
+                       Left err -> error err
+                       Right value -> pure $ Done value
+          _    -> do parser' <- consume parser
+                     case resolve parser' of
+                       Left err -> error err
+                       Right value -> pure $ Done value
+    Nothing -> pure Empty
 
 instance Resolve CliParser where
-  resolve (CliArgument parser) = first ("CliParser: " <>) $ resolve parser
+  resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
