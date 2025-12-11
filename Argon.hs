@@ -117,6 +117,9 @@ mapParser f Empty            = Empty
 mapParser f (Done r)         = Done r
 mapParser f (Partial parser) = Partial $ f parser
 
+eitherToResult :: MonadError String m => Either String r -> m (ParserResult p r)
+eitherToResult = either throwError (pure . Done)
+
 -- | A type class for anything that can be a parsing node in a
 -- 'ParseTree'.
 class Parser p where
@@ -131,7 +134,7 @@ instance Valency TextParser where
 
 instance Parser TextParser where
   feedParser (TextParser hint parse) = pop >>= \case
-    Just s -> either throwError (pure . Done) $ parse s
+    Just s -> eitherToResult $ parse s
     Nothing -> throwError $ "expected " <> T.unpack hint <> ", got end-of-input"
 
 instance Resolve TextParser where
@@ -164,7 +167,7 @@ instance Parser OptParser where
   feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
     Just s -> case breakKeyValue s of
       Just (k, v) | key == k ->
-                    pop *> either throwError (pure . Done) (parse v)
+                    pop *> eitherToResult (parse v)
     _ -> pure Empty
 
 -- | Parsers for top-level CLI arguments such as commands and options.
@@ -188,26 +191,25 @@ instance Parser CliParser where
           void pop
 
           -- parse the parameter, if any
-          parser' <- case valency parser of
-                       Multary -> pop >>= \case
-                         Nothing -> throwError
-                           $ "CliOption ("
-                           <> T.unpack key
-                           <> "): missing argument"
-                         Just s ->
-                           case runStream (consume parser) (T.split (== ',') s) of
-                             Left err -> throwError err
-                             -- TODO: handle leftover args
-                             Right (res, _) -> pure res
-                       _ -> consume parser
-
-          either throwError (pure . Done) $ resolve parser'
+          eitherToResult . resolve
+            =<< case valency parser of
+                  Multary -> pop >>= \case
+                    Nothing -> throwError
+                      $ "CliOption ("
+                      <> T.unpack key
+                      <> "): missing argument"
+                    Just s ->
+                      case runStream (consume parser) (T.split (== ',') s) of
+                        Left err -> throwError err
+                        -- TODO: handle leftover args
+                        Right (res, _) -> pure res
+                  _ -> consume parser
     _ -> pure Empty
   feedParser (CliCommand cmd tree) = peek >>= \case
     Just s | cmd == s ->
              pop -- consume command
              *> consume tree
-             >>= either throwError (pure . Done) . resolve
+             >>= eitherToResult . resolve
     _ -> pure Empty
 
 instance Resolve CliParser where
