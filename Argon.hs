@@ -116,19 +116,8 @@ data Flag
   | ShortOption Char
   deriving (Eq, Show)
 
-type Flags = NonEmpty Flag
-
-class ToFlag a where
-  flag :: a -> Flags
-
-instance ToFlag Char where
-  flag = NonEmpty.singleton . ShortOption
-
-instance ToFlag Text where
-  flag = NonEmpty.singleton . LongOption
-
 data OptionInfo = OptionInfo
-  { optFlags :: Flags
+  { optFlags :: NonEmpty Flag
   , optHelp  :: Text
   } deriving (Show)
 
@@ -140,15 +129,12 @@ instance Accepts OptionInfo where
   accepts _ _ = False
 
 optHead :: OptionInfo -> Flag
-optHead info = NonEmpty.head $ optFlags info
+optHead = NonEmpty.head . optFlags
 
 type Commands = NonEmpty Text
 
-command :: Text -> Commands
-command = NonEmpty.singleton
-
 data CommandInfo = CommandInfo
-  { cmdNames :: Commands
+  { cmdNames :: NonEmpty Text
   , cmdHelp  :: Text
   } deriving (Show)
 
