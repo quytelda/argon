@@ -185,8 +185,8 @@ eitherToResult = either throwError (pure . Done)
 
 -- | A type class for anything that can be a parsing node in a
 -- 'ParseTree'.
-class Parser p where
-  feedParser :: p r -> Stream Text (ParserResult p r)
+class Parser p tok where
+  feedParser :: p r -> Stream tok (ParserResult p r)
 
 -- | A parser that accepts a simple text argument.
 data TextParser r = TextParser Text (Text -> Either String r)
@@ -195,7 +195,7 @@ data TextParser r = TextParser Text (Text -> Either String r)
 instance Valency TextParser where
   valency _ = Unary
 
-instance Parser TextParser where
+instance Parser TextParser Text where
   feedParser (TextParser hint parse) = pop >>= \case
     Just s -> eitherToResult $ parse s
     Nothing -> throwError $ "expected " <> T.unpack hint <> ", got end-of-input"
@@ -231,7 +231,7 @@ breakKeyValue s =
     (key, T.uncons -> Just (_, value)) -> Just (key, value)
     _                                  -> Nothing
 
-instance Parser OptParser where
+instance Parser OptParser Text where
   feedParser (OptParameter parser) = mapParser OptParameter <$> feedParser parser
   feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
     Just (breakKeyValue -> Just (k, v))
@@ -253,7 +253,7 @@ instance Valency CliParser where
   valency (CliOption _ tree)  = Unary <> valency tree
   valency (CliCommand _ tree) = Unary <> valency tree
 
-instance Parser CliParser where
+instance Parser CliParser Text where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
   feedParser (CliOption info parser) = peek >>= \case
     Just s | info `accepts` s -> do
@@ -293,7 +293,7 @@ instance Resolve CliParser where
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with
 -- an updated subtree and further traversal ceases.
-feed :: Parser p => ParseTree p r -> MaybeT (Stream Text) (ParseTree p r)
+feed :: Parser p tok => ParseTree p r -> MaybeT (Stream tok) (ParseTree p r)
 feed EmptyNode = empty
 feed (ValueNode _) = empty
 feed (ParseNode parser) = lift (feedParser parser) >>= \case
@@ -315,7 +315,7 @@ feed (ManyNode tree) =
 -- | Repeatedly feed input to the tree using `feed` until either no
 -- input is consumed after traversal (e.g. `feed` returns Nothing), or
 -- no input remains.
-consume :: Parser p => ParseTree p r -> Stream Text (ParseTree p r)
+consume :: Parser p tok => ParseTree p r -> Stream tok (ParseTree p r)
 consume tree = do
   result <- runMaybeT $ feed tree
   case result of
@@ -327,10 +327,10 @@ consume tree = do
     _ -> pure tree
 
 parseArguments
-  :: (Parser p, Resolve p)
+  :: (Parser p tok, Resolve p)
   => ParseTree p a
-  -> [Text]
-  -> Either String (a, [Text])
+  -> [tok]
+  -> Either String (a, [tok])
 parseArguments tree args = do
   (tree', args') <- runStream (consume tree) args
   result <- resolve tree'
