@@ -111,9 +111,6 @@ peek = gets $ fmap fst . List.uncons
 push :: tok -> Stream tok ()
 push s = modify' (s:)
 
-prepend :: [tok] -> Stream tok ()
-prepend ts = modify' (ts <>)
-
 --------------------------------------------------------------------------------
 -- Tokens
 
@@ -288,7 +285,7 @@ instance Parser CliParser Token where
             Right (_, arg:_)
              | multary tree -> throwError $ "unrecognized option argument: " <> show arg
             Right (result, args') ->
-              prepend (Argument <$> args') $> Done result
+              traverse (push . Argument) args' $> Done result
     _ -> pure Empty
   feedParser (CliCommand info tree) = peek >>= \case
     Just s | info `accepts` s ->
