@@ -109,13 +109,32 @@ push :: Text -> Stream ()
 push s = modify' (s:)
 
 --------------------------------------------------------------------------------
+-- Tokens
+
+data Token
+  = LongOption Text
+  | ShortOption Char
+  | Argument Text
+  | Escaped Text
+  deriving (Show)
+
+tokenize :: [Text] -> [Token]
+tokenize args =
+  let (regularArgs, drop 1 -> escapedArgs) = break (== "--") args
+  in fmap argToToken regularArgs <> fmap Escaped escapedArgs
+  where
+    argToToken (T.stripPrefix "--" -> Just s) = LongOption s
+    argToToken (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = ShortOption c
+    argToToken s = Argument s
+
+--------------------------------------------------------------------------------
 
 class Accepts a where
   accepts :: a -> Text -> Bool
 
 data Flag
-  = LongOption Text
-  | ShortOption Char
+  = LongFlag Text
+  | ShortFlag Char
   deriving (Eq, Show)
 
 data OptionInfo = OptionInfo
@@ -125,9 +144,9 @@ data OptionInfo = OptionInfo
 
 instance Accepts OptionInfo where
   accepts OptionInfo{..} (T.stripPrefix "--" -> Just s) =
-    LongOption s `elem` optFlags
+    LongFlag s `elem` optFlags
   accepts OptionInfo{..} (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) =
-    ShortOption c `elem` optFlags
+    ShortFlag c `elem` optFlags
   accepts _ _ = False
 
 optHead :: OptionInfo -> Flag
