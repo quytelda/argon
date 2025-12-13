@@ -1,8 +1,9 @@
-{-# LANGUAGE GADTs           #-}
-{-# LANGUAGE LambdaCase      #-}
-{-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE ViewPatterns    #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedLists   #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE ViewPatterns      #-}
 
 import           Control.Applicative
 import           Control.Monad
@@ -89,23 +90,23 @@ instance Valency p => Valency (ParseTree p) where
 --------------------------------------------------------------------------------
 -- Stream Monad
 
-type Stream = StateT [Text] (Except String)
+type Stream tok = StateT [tok] (Except String)
 
-runStream :: Stream a -> [Text] -> Either String (a, [Text])
+runStream :: Stream tok a -> [tok] -> Either String (a, [tok])
 runStream m = runExcept . runStateT m
 
-isEmptyStream :: Stream Bool
+isEmptyStream :: Stream tok Bool
 isEmptyStream = gets null
 
-pop :: Stream (Maybe Text)
+pop :: Stream tok (Maybe tok)
 pop = state $ \case
   [] -> (Nothing, [])
   (x:xs) -> (Just x, xs)
 
-peek :: Stream (Maybe Text)
+peek :: Stream tok (Maybe tok)
 peek = gets $ fmap fst . List.uncons
 
-push :: Text -> Stream ()
+push :: tok -> Stream tok ()
 push s = modify' (s:)
 
 --------------------------------------------------------------------------------
@@ -123,9 +124,9 @@ tokenize args =
   let (regularArgs, drop 1 -> escapedArgs) = break (== "--") args
   in fmap argToToken regularArgs <> fmap Escaped escapedArgs
   where
-    argToToken (T.stripPrefix "--" -> Just s) = LongOption s
+    argToToken (T.stripPrefix "--" -> Just s)                   = LongOption s
     argToToken (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = ShortOption c
-    argToToken s = Argument s
+    argToToken s                                                = Argument s
 
 --------------------------------------------------------------------------------
 
@@ -185,7 +186,7 @@ eitherToResult = either throwError (pure . Done)
 -- | A type class for anything that can be a parsing node in a
 -- 'ParseTree'.
 class Parser p where
-  feedParser :: p r -> Stream (ParserResult p r)
+  feedParser :: p r -> Stream Text (ParserResult p r)
 
 -- | A parser that accepts a simple text argument.
 data TextParser r = TextParser Text (Text -> Either String r)
@@ -292,7 +293,7 @@ instance Resolve CliParser where
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with
 -- an updated subtree and further traversal ceases.
-feed :: Parser p => ParseTree p r -> MaybeT Stream (ParseTree p r)
+feed :: Parser p => ParseTree p r -> MaybeT (Stream Text) (ParseTree p r)
 feed EmptyNode = empty
 feed (ValueNode _) = empty
 feed (ParseNode parser) = lift (feedParser parser) >>= \case
@@ -314,7 +315,7 @@ feed (ManyNode tree) =
 -- | Repeatedly feed input to the tree using `feed` until either no
 -- input is consumed after traversal (e.g. `feed` returns Nothing), or
 -- no input remains.
-consume :: Parser p => ParseTree p r -> Stream (ParseTree p r)
+consume :: Parser p => ParseTree p r -> Stream Text (ParseTree p r)
 consume tree = do
   result <- runMaybeT $ feed tree
   case result of
