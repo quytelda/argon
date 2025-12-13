@@ -77,6 +77,8 @@ instance Semigroup Arity where
 -- valency/arity.
 class Valency p where
   valency :: p r -> Arity
+  multary :: p r -> Bool
+  multary parser = valency parser == Multary
 
 instance Valency p => Valency (ParseTree p) where
   valency EmptyNode        = Nullary
@@ -130,6 +132,16 @@ tokenize args =
     argToToken (T.stripPrefix "--" -> Just s)                   = LongOption s
     argToToken (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = ShortOption c
     argToToken s                                                = Argument s
+
+popArguments :: Bool -> Stream Token [Text]
+popArguments split = state $ \case
+  (Argument s : xs') -> (listify s, xs')
+  xs -> ([], xs)
+  where
+    listify s =
+      if split
+      then T.split (== ',') s
+      else [s]
 
 --------------------------------------------------------------------------------
 
@@ -265,25 +277,18 @@ instance Valency CliParser where
 
 instance Parser CliParser Token where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
-  feedParser (CliOption info parser) = peek >>= \case
+  feedParser (CliOption info tree) = peek >>= \case
     Just s | info `accepts` s -> do
           -- consume option flag
           void pop
 
-          let isMultary = valency parser == Multary
-          pop >>= \case
-            Just (Argument next) -> do
-              let args = if isMultary
-                         then T.split (== ',') next
-                         else pure next
-              case runStream (consume parser) args of
-                Left err -> throwError err
-                Right (result, args') -> do
-                  if isMultary && not (null args')
-                    then throwError $ "leftover option arguments: " <> show args'
-                    else prepend $ Argument <$> args'
-                  eitherToResult $ resolve result
-            _ -> undefined
+          args <- popArguments (multary tree)
+          case parseTokens tree args of
+            Left err -> throwError err
+            Right (_, arg:_)
+             | multary tree -> throwError $ "unrecognized option argument: " <> show arg
+            Right (result, args') ->
+              prepend (Argument <$> args') $> Done result
     _ -> pure Empty
   feedParser (CliCommand info tree) = peek >>= \case
     Just s | info `accepts` s ->
@@ -336,12 +341,19 @@ consume tree = do
         else consume tree'
     _ -> pure tree
 
+parseTokens
+  :: (Parser p tok, Resolve p)
+  => ParseTree p a
+  -> [tok]
+  -> Either String (a, [tok])
+parseTokens tree args = do
+  (tree', args') <- runStream (consume tree) args
+  result <- resolve tree'
+  return (result, args')
+
 parseArguments
   :: (Parser p Token, Resolve p)
   => ParseTree p a
   -> [Text]
   -> Either String (a, [Token])
-parseArguments tree args = do
-  (tree', args') <- runStream (consume tree) $ tokenize args
-  result <- resolve tree'
-  return (result, args')
+parseArguments tree = parseTokens tree . tokenize
