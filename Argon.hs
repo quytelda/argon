@@ -305,3 +305,13 @@ consume tree = do
         then pure tree'
         else consume tree'
     _ -> pure tree
+
+parseArguments
+  :: (Parser p, Resolve p)
+  => ParseTree p a
+  -> [Text]
+  -> Either String (a, [Text])
+parseArguments tree args = do
+  (tree', args') <- runStream (consume tree) args
+  result <- resolve tree'
+  return (result, args')
