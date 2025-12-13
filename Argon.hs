@@ -109,6 +109,9 @@ peek = gets $ fmap fst . List.uncons
 push :: tok -> Stream tok ()
 push s = modify' (s:)
 
+prepend :: [tok] -> Stream tok ()
+prepend ts = modify' (ts <>)
+
 --------------------------------------------------------------------------------
 -- Tokens
 
@@ -131,7 +134,7 @@ tokenize args =
 --------------------------------------------------------------------------------
 
 class Accepts a where
-  accepts :: a -> Text -> Bool
+  accepts :: a -> Token -> Bool
 
 data Flag
   = LongFlag Text
@@ -144,9 +147,9 @@ data OptionInfo = OptionInfo
   } deriving (Show)
 
 instance Accepts OptionInfo where
-  accepts OptionInfo{..} (T.stripPrefix "--" -> Just s) =
+  accepts OptionInfo{..} (LongOption s) =
     LongFlag s `elem` optFlags
-  accepts OptionInfo{..} (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) =
+  accepts OptionInfo{..} (ShortOption c) =
     ShortFlag c `elem` optFlags
   accepts _ _ = False
 
@@ -161,7 +164,8 @@ data CommandInfo = CommandInfo
   } deriving (Show)
 
 instance Accepts CommandInfo where
-  accepts CommandInfo{..} s = s `elem` cmdNames
+  accepts CommandInfo{..} (Argument s) = s `elem` cmdNames
+  accepts _ _                          = False
 
 cmdHead :: CommandInfo -> Text
 cmdHead = NonEmpty.head . cmdNames
@@ -199,6 +203,12 @@ instance Parser TextParser Text where
   feedParser (TextParser hint parse) = pop >>= \case
     Just s -> eitherToResult $ parse s
     Nothing -> throwError $ "expected " <> T.unpack hint <> ", got end-of-input"
+
+instance Parser TextParser Token where
+  feedParser (TextParser hint parse) = pop >>= \case
+    Just (Argument s) -> eitherToResult $ parse s
+    Just (Escaped s)  -> eitherToResult $ parse s
+    _ -> throwError $ "expecting " <> T.unpack hint
 
 instance Resolve TextParser where
   resolve (TextParser hint _) =
@@ -253,27 +263,27 @@ instance Valency CliParser where
   valency (CliOption _ tree)  = Unary <> valency tree
   valency (CliCommand _ tree) = Unary <> valency tree
 
-instance Parser CliParser Text where
+instance Parser CliParser Token where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
   feedParser (CliOption info parser) = peek >>= \case
     Just s | info `accepts` s -> do
           -- consume option flag
           void pop
 
-          -- parse the parameter, if any
-          eitherToResult . resolve
-            =<< case valency parser of
-                  Multary -> pop >>= \case
-                    Nothing -> throwError
-                      $ "CliOption ("
-                      <> show (optHead info)
-                      <> "): missing argument"
-                    Just s ->
-                      case runStream (consume parser) (T.split (== ',') s) of
-                        Left err       -> throwError err
-                        -- TODO: handle leftover args
-                        Right (res, _) -> pure res
-                  _ -> consume parser
+          let isMultary = valency parser == Multary
+          pop >>= \case
+            Just (Argument next) -> do
+              let args = if isMultary
+                         then T.split (== ',') next
+                         else pure next
+              case runStream (consume parser) args of
+                Left err -> throwError err
+                Right (result, args') -> do
+                  if isMultary && not (null args')
+                    then throwError $ "leftover option arguments: " <> show args'
+                    else prepend $ Argument <$> args'
+                  eitherToResult $ resolve result
+            _ -> undefined
     _ -> pure Empty
   feedParser (CliCommand info tree) = peek >>= \case
     Just s | info `accepts` s ->
@@ -327,11 +337,11 @@ consume tree = do
     _ -> pure tree
 
 parseArguments
-  :: (Parser p tok, Resolve p)
+  :: (Parser p Token, Resolve p)
   => ParseTree p a
-  -> [tok]
-  -> Either String (a, [tok])
+  -> [Text]
+  -> Either String (a, [Token])
 parseArguments tree args = do
-  (tree', args') <- runStream (consume tree) args
+  (tree', args') <- runStream (consume tree) $ tokenize args
   result <- resolve tree'
   return (result, args')
