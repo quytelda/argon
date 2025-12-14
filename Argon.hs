@@ -48,7 +48,7 @@ instance Alternative (ParseTree p) where
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
 class Resolve f where
-  resolve :: f r -> Either String r
+  resolve :: f r -> Except String r
 
 instance Resolve p => Resolve (ParseTree p) where
   resolve EmptyNode          = throwError "empty"
@@ -56,7 +56,7 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve (ParseNode parser) = resolve parser
   resolve (MapNode f p)      = fmap f $ resolve p
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
-  resolve (SumNode l r)      = resolve l <> resolve r
+  resolve (SumNode l r)      = resolve l <|> resolve r
   resolve (ManyNode p)       = pure []
 
 --------------------------------------------------------------------------------
@@ -242,9 +242,9 @@ instance Valency OptParser where
   valency (OptSwitch _ _)  = Unary
 
 instance Resolve OptParser where
-  resolve (OptParameter parser) = first ("OptParameter: " <>) $ resolve parser
+  resolve (OptParameter parser) = withExcept ("OptParameter: " <>) $ resolve parser
   resolve (OptKey key parser) =
-    first (\s -> "OptKey (" <> T.unpack key <> "): " <> s) $ resolve parser
+    withExcept (\s -> "OptKey (" <> T.unpack key <> "): " <> s) $ resolve parser
   resolve (OptSwitch name _) = throwError $ "OptSwitch: " <> T.unpack name
 
 -- | Parse a 'Text' of the form "key=value" into ("key", "value"). If
@@ -284,7 +284,7 @@ instance Valency CliParser where
   valency (CliCommand _ tree) = Unary <> valency tree
 
 instance Resolve CliParser where
-  resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
+  resolve (CliParameter parser) = withExcept ("CliParameter: " <>) $ resolve parser
   resolve (CliOption info _)    = throwError $ "CliOption (" <> show (optHead info) <> ")"
   resolve (CliCommand info _)   = throwError $ "CliCommand (" <> show (cmdHead info) <> ")"
 
@@ -299,19 +299,19 @@ instance Parser Token CliParser where
           void pop
 
           args <- popArguments (multary tree)
-          case parseTokens tree args of
-            Left err -> throwError err
-            Right (_, arg:_)
-             | multary tree ->
-               throwError $ "unrecognized option argument: " <> show arg
-            Right (result, args') ->
+          lift (parseTokens tree args) >>= \case
+            (_, arg:_)
+              | multary tree ->
+                throwError $ "unrecognized subargument: " <> show arg
+            (result, args') ->
               traverse (push . Argument) args' $> Done result
     _ -> pure Empty
   feedParser (CliCommand info tree) = peek >>= \case
     Just s | info `accepts` s ->
              pop -- consume command
              *> satiate tree
-             >>= eitherToResult . resolve
+             >>= lift . resolve
+             <&> Done
     _ -> pure Empty
 
 --------------------------------------------------------------------------------
@@ -352,9 +352,9 @@ parseTokens
   :: (Parser tok p, Resolve p)
   => ParseTree p a
   -> [tok]
-  -> Either String (a, [tok])
+  -> Except String (a, [tok])
 parseTokens tree args = do
-  (tree', args') <- runStream (satiate tree) args
+  (tree', args') <- runStateT (satiate tree) args
   result <- resolve tree'
   return (result, args')
 
@@ -363,4 +363,4 @@ parseArguments
   => ParseTree p a
   -> [Text]
   -> Either String (a, [Token])
-parseArguments tree = parseTokens tree . tokenize
+parseArguments tree = runExcept . parseTokens tree . tokenize
