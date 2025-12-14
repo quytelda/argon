@@ -67,6 +67,7 @@ instance Resolve p => Resolve (ParseTree p) where
 data Arity = Nullary | Unary | Multary
   deriving (Eq, Show, Ord)
 
+-- | 'Arity's can be combined somewhat like addition.
 instance Semigroup Arity where
   Nullary <> Nullary = Nullary
   Nullary <> Unary   = Unary
@@ -77,6 +78,11 @@ instance Semigroup Arity where
 -- valency/arity.
 class Valency p where
   valency :: p r -> Arity
+
+  -- | While we need to track three possible arity cases to correctly
+  -- compute the valency of a parse tree, we mostly only care whether
+  -- the tree is 'Multary'. This convenience function tells us whether
+  -- or not the tree is multary.
   multary :: p r -> Bool
   multary parser = valency parser == Multary
 
@@ -92,6 +98,7 @@ instance Valency p => Valency (ParseTree p) where
 --------------------------------------------------------------------------------
 -- Stream Monad
 
+-- | A stream parameterized by token type.
 type Stream tok = StateT [tok] (Except String)
 
 runStream :: Stream tok a -> [tok] -> Either String (a, [tok])
@@ -114,11 +121,13 @@ push s = modify' (s:)
 --------------------------------------------------------------------------------
 -- Tokens
 
+-- | CLI Argument Tokens
 data Token
-  = LongOption Text
-  | ShortOption Char
-  | Argument Text
-  | Escaped Text
+  = LongOption Text -- ^ A long form flag (e.g. --option)
+  | ShortOption Char -- ^ A short form flag (e.g. -c)
+  | Argument Text -- ^ A freeform argument that is not an option
+  | Escaped Text -- ^ An argument escaped using '--' that can only
+                 -- be consumed by 'CliParameter' parsers.
   deriving (Show)
 
 tokenize :: [Text] -> [Token]
@@ -130,6 +139,11 @@ tokenize args =
     argToToken (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = ShortOption c
     argToToken s                                                = Argument s
 
+-- | If the next token in the stream is an 'Argument', pop it and
+-- convert it into an argument list that can be passed to a subparser.
+-- `popArgument False` should generate a list of 0 or 1 values, while
+-- `popArgument True` comma-splits any argument it finds into multiple
+-- values.
 popArguments :: Bool -> Stream Token [Text]
 popArguments split = state $ \case
   (Argument s : xs') -> (listify s, xs')
@@ -162,10 +176,9 @@ instance Accepts OptionInfo where
     ShortFlag c `elem` optFlags
   accepts _ _ = False
 
+-- | Get a representative flag for this option (e.g. the first one).
 optHead :: OptionInfo -> Flag
 optHead = NonEmpty.head . optFlags
-
-type Commands = NonEmpty Text
 
 data CommandInfo = CommandInfo
   { cmdNames :: NonEmpty Text
@@ -176,6 +189,8 @@ instance Accepts CommandInfo where
   accepts CommandInfo{..} (Argument s) = s `elem` cmdNames
   accepts _ _                          = False
 
+-- | Get a representative command name for this command (e.g. the
+-- first one).
 cmdHead :: CommandInfo -> Text
 cmdHead = NonEmpty.head . cmdNames
 
@@ -208,20 +223,20 @@ data TextParser r = TextParser Text (Text -> Either String r)
 instance Valency TextParser where
   valency _ = Unary
 
+instance Resolve TextParser where
+  resolve (TextParser hint _) =
+    throwError $ "TextParser: expected " <> T.unpack hint
+
 instance Parser TextParser Text where
   feedParser (TextParser hint parse) = pop >>= \case
     Just s -> eitherToResult $ parse s
-    Nothing -> throwError $ "expected " <> T.unpack hint <> ", got end-of-input"
+    Nothing -> throwError $ "TextParser: expected " <> T.unpack hint
 
 instance Parser TextParser Token where
   feedParser (TextParser hint parse) = pop >>= \case
     Just (Argument s) -> eitherToResult $ parse s
     Just (Escaped s)  -> eitherToResult $ parse s
-    _ -> throwError $ "expecting " <> T.unpack hint
-
-instance Resolve TextParser where
-  resolve (TextParser hint _) =
-    throwError $ "TextParser: expected " <> T.unpack hint
+    _ -> throwError $ "TextParser: expected " <> T.unpack hint
 
 -- | Parsers for the argument of an option, i.e. '--option key=value'.
 data OptParser r
@@ -244,8 +259,8 @@ instance Resolve OptParser where
 -- | Parse a 'Text' of the form "key=value" into ("key", "value"). If
 -- the delimiter ('=') does not appear in the string, the result is
 -- 'Nothing'.
-breakKeyValue :: Text -> Maybe (Text, Text)
-breakKeyValue s =
+keyEqualsValue :: Text -> Maybe (Text, Text)
+keyEqualsValue s =
   case T.break (== '=') s of
     (key, T.uncons -> Just (_, value)) -> Just (key, value)
     _                                  -> Nothing
@@ -253,7 +268,7 @@ breakKeyValue s =
 instance Parser OptParser Text where
   feedParser (OptParameter parser) = mapParser OptParameter <$> feedParser parser
   feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
-    Just (breakKeyValue -> Just (k, v))
+    Just (keyEqualsValue -> Just (k, v))
       | key == k -> pop *> eitherToResult (parse v)
     _ -> pure Empty
   feedParser (OptSwitch key present) = peek >>= \case
@@ -271,6 +286,11 @@ instance Valency CliParser where
   valency (CliParameter p)    = valency p
   valency (CliOption _ tree)  = Unary <> valency tree
   valency (CliCommand _ tree) = Unary <> valency tree
+
+instance Resolve CliParser where
+  resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
+  resolve (CliOption info _)    = throwError $ "CliOption (" <> show (optHead info) <> ")"
+  resolve (CliCommand info _)   = throwError $ "CliCommand (" <> show (cmdHead info) <> ")"
 
 instance Parser CliParser Token where
   feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
@@ -294,11 +314,6 @@ instance Parser CliParser Token where
              *> satiate tree
              >>= eitherToResult . resolve
     _ -> pure Empty
-
-instance Resolve CliParser where
-  resolve (CliParameter parser) = first ("CliParameter: " <>) $ resolve parser
-  resolve (CliOption info _)    = throwError $ "CliOption (" <> show (optHead info) <> ")"
-  resolve (CliCommand info _)   = throwError $ "CliCommand (" <> show (cmdHead info) <> ")"
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
