@@ -227,17 +227,6 @@ instance Resolve TextParser where
   resolve (TextParser hint _) =
     throwError $ "TextParser: expected " <> T.unpack hint
 
-instance Parser Text TextParser where
-  feedParser (TextParser hint parse) = pop >>= \case
-    Just s -> eitherToResult $ parse s
-    Nothing -> throwError $ "TextParser: expected " <> T.unpack hint
-
-instance Parser Token TextParser where
-  feedParser (TextParser hint parse) = pop >>= \case
-    Just (Argument s) -> eitherToResult $ parse s
-    Just (Escaped s)  -> eitherToResult $ parse s
-    _ -> throwError $ "TextParser: expected " <> T.unpack hint
-
 -- | Parsers for the argument of an option, i.e. '--option key=value'.
 data OptParser r
   = OptParameter (TextParser r) -- ^ A standard parameter
@@ -265,8 +254,13 @@ keyEqualsValue s =
     (key, T.uncons -> Just (_, value)) -> Just (key, value)
     _                                  -> Nothing
 
+-- TODO: The OptParameter case will consume any argument, even if it
+-- is a valid key=value argument that should be consumed by a
+-- subsequent parser (or a switch). Can we deal with this somehow?
 instance Parser Text OptParser where
-  feedParser (OptParameter parser) = mapParser OptParameter <$> feedParser parser
+  feedParser (OptParameter (TextParser hint parse)) = pop >>= \case
+    Just s -> eitherToResult (parse s)
+    Nothing -> pure Empty
   feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
     Just (keyEqualsValue -> Just (k, v))
       | key == k -> pop *> eitherToResult (parse v)
@@ -293,7 +287,10 @@ instance Resolve CliParser where
   resolve (CliCommand info _)   = throwError $ "CliCommand (" <> show (cmdHead info) <> ")"
 
 instance Parser Token CliParser where
-  feedParser (CliParameter parser) = mapParser CliParameter <$> feedParser parser
+  feedParser (CliParameter (TextParser hint parse)) = peek >>= \case
+    Just (Argument s) -> pop *> eitherToResult (parse s)
+    Just (Escaped s)  -> pop *> eitherToResult (parse s)
+    _ -> pure Empty
   feedParser (CliOption info tree) = peek >>= \case
     Just s | info `accepts` s -> do
           -- consume option flag
