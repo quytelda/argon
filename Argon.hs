@@ -5,6 +5,8 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE ViewPatterns      #-}
 
+module Argon where
+
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
