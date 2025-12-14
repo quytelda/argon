@@ -283,14 +283,15 @@ instance Parser CliParser Token where
           case parseTokens tree args of
             Left err -> throwError err
             Right (_, arg:_)
-             | multary tree -> throwError $ "unrecognized option argument: " <> show arg
+             | multary tree ->
+               throwError $ "unrecognized option argument: " <> show arg
             Right (result, args') ->
               traverse (push . Argument) args' $> Done result
     _ -> pure Empty
   feedParser (CliCommand info tree) = peek >>= \case
     Just s | info `accepts` s ->
              pop -- consume command
-             *> consume tree
+             *> satiate tree
              >>= eitherToResult . resolve
     _ -> pure Empty
 
@@ -324,19 +325,14 @@ feed (ManyNode tree) =
   <$> feed tree
   <*> pure (ManyNode tree)
 
--- | Repeatedly feed input to the tree using `feed` until either no
--- input is consumed after traversal (e.g. `feed` returns Nothing), or
--- no input remains.
-consume :: Parser p tok => ParseTree p r -> Stream tok (ParseTree p r)
-consume tree = do
+-- | Repeatedly feed input to the tree using `feed` until no input is
+-- consumed (e.g. `feed` returns Nothing).
+satiate :: Parser p tok => ParseTree p r -> Stream tok (ParseTree p r)
+satiate tree = do
   result <- runMaybeT $ feed tree
   case result of
-    Just tree' -> do
-      isEmpty <- isEmptyStream
-      if isEmpty
-        then pure tree'
-        else consume tree'
-    _ -> pure tree
+    Just tree' -> satiate tree'
+    Nothing    -> pure tree
 
 parseTokens
   :: (Parser p tok, Resolve p)
@@ -344,7 +340,7 @@ parseTokens
   -> [tok]
   -> Either String (a, [tok])
 parseTokens tree args = do
-  (tree', args') <- runStream (consume tree) args
+  (tree', args') <- runStream (satiate tree) args
   result <- resolve tree'
   return (result, args')
 
