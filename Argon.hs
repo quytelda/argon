@@ -210,8 +210,6 @@ mapParser f Empty            = Empty
 mapParser f (Done r)         = Done r
 mapParser f (Partial parser) = Partial $ f parser
 
-eitherToResult :: MonadError String m => Either String r -> m (ParserResult p r)
-eitherToResult = either throwError (pure . Done)
 
 -- | A type class for anything that can be a parsing node in a
 -- 'ParseTree'. A 'Parser tok p' processes a stream of 'tok's.
@@ -219,7 +217,7 @@ class Parser tok p where
   feedParser :: p r -> Stream tok (ParserResult p r)
 
 -- | A parser that accepts a simple text argument.
-data TextParser r = TextParser Text (Text -> Either String r)
+data TextParser r = TextParser Text (Text -> Except String r)
   deriving (Functor)
 
 instance Valency TextParser where
@@ -261,11 +259,11 @@ keyEqualsValue s =
 -- subsequent parser (or a switch). Can we deal with this somehow?
 instance Parser Text OptParser where
   feedParser (OptParameter (TextParser hint parse)) = pop >>= \case
-    Just s -> eitherToResult (parse s)
+    Just s -> lift (parse s) <&> Done
     Nothing -> pure Empty
   feedParser (OptKey key (TextParser _ parse)) = peek >>= \case
     Just (keyEqualsValue -> Just (k, v))
-      | key == k -> pop *> eitherToResult (parse v)
+      | key == k -> pop *> lift (parse v) <&> Done
     _ -> pure Empty
   feedParser (OptSwitch key present) = peek >>= \case
     Just s | key == s -> pop $> Done present
@@ -290,8 +288,8 @@ instance Resolve CliParser where
 
 instance Parser Token CliParser where
   feedParser (CliParameter (TextParser hint parse)) = peek >>= \case
-    Just (Argument s) -> pop *> eitherToResult (parse s)
-    Just (Escaped s)  -> pop *> eitherToResult (parse s)
+    Just (Argument s) -> pop *> lift (parse s) <&> Done
+    Just (Escaped s)  -> pop *> lift (parse s) <&> Done
     _ -> pure Empty
   feedParser (CliOption info tree) = peek >>= \case
     Just s | info `accepts` s -> do
