@@ -32,10 +32,7 @@ data ParseTree p r where
   EmptyNode :: ParseTree p r
   -- | Terminal node with a resolved value
   ValueNode :: r -> ParseTree p r
-  -- | A terminal parser which parses a token into a result.
-  TokenNode :: Parser p => (Token p -> Except String r) -> ParseTree p r
-  -- | A subparser guarded by a static condition check which runs in a
-  -- new subcontext.
+  -- | A parser awaiting input
   ParseNode :: p r -> ParseTree p r
   -- | Abstracts fmap
   MapNode :: (a -> r) -> ParseTree p a -> ParseTree p r
