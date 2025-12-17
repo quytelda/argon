@@ -11,6 +11,9 @@ import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State
+import           Control.Monad.Trans
+import           Control.Monad.Trans.Maybe
+import           Data.Functor
 import           Data.Kind
 import qualified Data.List                 as List
 import           Data.List.NonEmpty        (NonEmpty)
