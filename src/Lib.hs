@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -11,9 +12,11 @@ import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.Kind
-import qualified Data.List            as List
-import           Data.Text            (Text)
-import qualified Data.Text            as T
+import qualified Data.List                 as List
+import           Data.List.NonEmpty        (NonEmpty)
+import qualified Data.List.NonEmpty        as NonEmpty
+import           Data.Text                 (Text)
+import qualified Data.Text                 as T
 
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
@@ -77,6 +80,33 @@ peek = gets $ fmap fst . List.uncons
 
 push :: tok -> Stream tok ()
 push s = modify' (s:)
+
+--------------------------------------------------------------------------------
+-- User Interface Descriptions
+
+data Flag
+  = LongFlag Text
+  | ShortFlag Char
+  deriving (Eq, Show)
+
+data OptionInfo = OptionInfo
+  { optFlags :: NonEmpty Flag
+  , optHelp  :: Text
+  } deriving (Show)
+
+-- | Get a representative flag for this option (e.g. the first one).
+optHead :: OptionInfo -> Flag
+optHead = NonEmpty.head . optFlags
+
+data CommandInfo = CommandInfo
+  { cmdNames :: NonEmpty Text
+  , cmdHelp  :: Text
+  } deriving (Show)
+
+-- | Get a representative command name for this command (e.g. the
+-- first one).
+cmdHead :: CommandInfo -> Text
+cmdHead = NonEmpty.head . cmdNames
 
 --------------------------------------------------------------------------------
 -- Top-level CLI Parsing
