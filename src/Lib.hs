@@ -25,6 +25,8 @@ class HasValency p where
 -- consume input token and produce a result or throw an error.
 class Parser (p :: Type -> Type) where
   type Token p
+  accepts :: p r -> Token p -> Bool
+  feedParser :: p r -> MaybeT (Stream (Token p)) r
 
 --------------------------------------------------------------------------------
 -- ParseTree
@@ -139,11 +141,26 @@ data SubToken
 data SubParser r
   = SubParameter (TextParser r)
   | SubAssoc Text (TextParser r)
-  | SubSwitch Text r
   deriving (Functor)
 
 instance HasValency SubParser where
   valency _ = Just 1
+
+instance Parser SubParser where
+  type Token SubParser = SubToken
+
+  accepts (SubParameter _) (SubArgument _)   = True
+  accepts (SubAssoc key _) (SubKeyValue k _) = key == k
+  accepts _ _                                = False
+
+  feedParser (SubParameter (TextParser _ parse)) = do
+    MaybeT peek >>= \case
+      SubArgument s -> lift . lift $ parse s
+      _             -> empty
+  feedParser (SubAssoc key (TextParser _ parse)) = do
+    MaybeT peek >>= \case
+      SubKeyValue k v | key == k -> lift . lift $ parse v
+      _                          -> empty
 
 --------------------------------------------------------------------------------
 -- Top-level CLI Parsing
