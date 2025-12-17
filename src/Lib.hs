@@ -109,6 +109,26 @@ cmdHead :: CommandInfo -> Text
 cmdHead = NonEmpty.head . cmdNames
 
 --------------------------------------------------------------------------------
+-- Basic Parser
+
+data TextParser r = TextParser Text (Text -> Except String r)
+  deriving (Functor)
+
+--------------------------------------------------------------------------------
+-- Subargument Parsing
+
+data SubToken
+  = SubKeyValue Text Text -- ^ A key=value argument
+  | SubArgument Text -- ^ A standard argument
+  deriving (Eq, Show)
+
+-- | Parsers for subarguments of an option, i.e. '--option key=value'.
+data SubParser r
+  = SubParameter (TextParser r)
+  | SubAssoc Text (TextParser r)
+  deriving (Functor)
+
+--------------------------------------------------------------------------------
 -- Top-level CLI Parsing
 
 data CliToken
