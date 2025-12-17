@@ -20,6 +20,7 @@ import           Data.List.NonEmpty        (NonEmpty)
 import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
+import qualified Data.Text.Lazy.Builder    as TLB
 
 -- | 'ParseTree p r' is an expression tree built from parsers of type
 -- 'p' which evaluates to a value of type 'r' supplied with the proper
@@ -210,6 +211,8 @@ mapParser f Empty            = Empty
 mapParser f (Done r)         = Done r
 mapParser f (Partial parser) = Partial $ f parser
 
+class Render a where
+  render :: a -> TLB.Builder
 
 -- | A type class for anything that can be a parsing node in a
 -- 'ParseTree'. A 'Parser tok p' processes a stream of 'tok's.
