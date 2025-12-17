@@ -18,6 +18,8 @@ import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
+class HasValency p where
+  valency :: p r -> Maybe Integer
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.
@@ -57,6 +59,17 @@ instance Alternative (ParseTree p) where
   empty = EmptyNode
   (<|>) = SumNode
   many = ManyNode
+
+instance HasValency p => HasValency (ParseTree p) where
+  valency EmptyNode        = Just 0
+  valency (ValueNode _)    = Just 0
+  valency (ParseNode p)    = valency p
+  valency (MapNode _ p)    = valency p
+  valency (ProdNode _ l r) = (+) <$> valency l <*> valency r
+  valency (SumNode l r)    = max <$> valency l <*> valency r
+  valency (ManyNode p)     = case valency p of
+                               Just n | n <= 0 -> Just 0
+                               _               -> Nothing
 
 --------------------------------------------------------------------------------
 -- Stream Monad
@@ -127,6 +140,9 @@ data SubParser r
   = SubParameter (TextParser r)
   | SubAssoc Text (TextParser r)
   deriving (Functor)
+
+instance HasValency SubParser where
+  valency _ = Just 1
 
 --------------------------------------------------------------------------------
 -- Top-level CLI Parsing
