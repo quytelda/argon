@@ -139,6 +139,7 @@ data SubToken
 data SubParser r
   = SubParameter (TextParser r)
   | SubAssoc Text (TextParser r)
+  | SubSwitch Text r
   deriving (Functor)
 
 instance HasValency SubParser where
