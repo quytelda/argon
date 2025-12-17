@@ -175,3 +175,17 @@ popArguments split = state $ \case
                          then T.split (== ',') s
                          else [s], xs')
   xs -> ([], xs)
+
+-- | Parsers for top-level CLI arguments such as commands and options.
+data CliParser r
+  = CliParameter (TextParser r)
+  | CliOption OptionInfo (ParseTree SubParser r)
+  | CliCommand CommandInfo (ParseTree CliParser r)
+  deriving (Functor)
+
+instance HasValency CliParser where
+  valency (CliParameter _) = Just 1
+  valency (CliOption _ subtree) = case valency subtree of
+                                    Just n | n <= 0 -> Just 1
+                                    _               -> Just 2
+  valency (CliCommand _ subtree) = (+1) <$> valency subtree
