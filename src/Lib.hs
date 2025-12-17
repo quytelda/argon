@@ -21,9 +21,14 @@ import qualified Data.Text                 as T
 class HasValency p where
   valency :: p r -> Maybe Integer
 
+-- | Things that can be resolved to a value, but might fail to
+-- resolve.
+class Resolve f where
+  resolve :: f r -> Except String r
+
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.
-class Parser (p :: Type -> Type) where
+class Resolve p => Parser (p :: Type -> Type) where
   type Token p
   accepts :: p r -> Token p -> Bool
   feedParser :: p r -> MaybeT (Stream (Token p)) r
@@ -72,6 +77,15 @@ instance HasValency p => HasValency (ParseTree p) where
   valency (ManyNode p)     = case valency p of
                                Just n | n <= 0 -> Just 0
                                _               -> Nothing
+
+instance Resolve p => Resolve (ParseTree p) where
+  resolve EmptyNode          = throwError "empty"
+  resolve (ValueNode value)  = pure value
+  resolve (ParseNode parser) = resolve parser
+  resolve (MapNode f p)      = fmap f $ resolve p
+  resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
+  resolve (SumNode l r)      = resolve l <|> resolve r
+  resolve (ManyNode p)       = pure []
 
 --------------------------------------------------------------------------------
 -- Stream Monad
@@ -146,6 +160,12 @@ data SubParser r
 instance HasValency SubParser where
   valency _ = Just 1
 
+instance Resolve SubParser where
+  resolve (SubParameter (TextParser hint _)) =
+    throwError $ "expected " <> T.unpack hint
+  resolve (SubAssoc key (TextParser hint _)) =
+    throwError $ "expected " <> T.unpack key <> "=" <> T.unpack hint
+
 instance Parser SubParser where
   type Token SubParser = SubToken
 
@@ -207,3 +227,11 @@ instance HasValency CliParser where
                                     Just n | n <= 0 -> Just 1
                                     _               -> Just 2
   valency (CliCommand _ subtree) = (+1) <$> valency subtree
+
+instance Resolve CliParser where
+  resolve (CliParameter (TextParser hint _)) =
+    throwError $ "expected " <> T.unpack hint
+  resolve (CliOption info _) =
+    throwError $ "expected " <> show (optHead info)
+  resolve (CliCommand info _) =
+    throwError $ "expected " <> show (cmdHead info)
