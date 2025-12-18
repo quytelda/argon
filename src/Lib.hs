@@ -270,12 +270,12 @@ satiate tree = do
     Just tree' -> satiate tree'
     Nothing    -> pure tree
 
-parseTokens
+runParseTree
   :: Parser p
   => ParseTree p r
   -> [Token p]
   -> Except String (r, [Token p])
-parseTokens tree args = do
+runParseTree tree args = do
   (tree', args') <- runStateT (satiate tree) args
   result <- resolve tree'
   return (result, args')
@@ -284,4 +284,4 @@ parseArguments
   :: ParseTree CliParser r
   -> [Text]
   -> Either String (r, [CliToken])
-parseArguments tree = runExcept . parseTokens tree . tokenize
+parseArguments tree = runExcept . runParseTree tree . tokenize
