@@ -299,8 +299,8 @@ instance Parser CliParser where
     args <- lift $ parseTokens <$> popArguments isMultary
     (result, _args') <- lift . lift $ withExcept ("CliOption: " <>) $ runParseTree subtree args
     case renderTokens _args' of
-      (arg:_) -> throwError $ "unrecognized subargument: " <> show arg
-      args'   -> traverse (lift . push . Argument) args' $> result
+      (arg:_) | isMultary -> throwError $ "unrecognized subargument: " <> show arg
+      args'               -> traverse (lift . push . Argument) args' $> result
   feedParser parser@(CliCommand _ subtree) = do
     next <- MaybeT peek
     guard $ parser `accepts` next
