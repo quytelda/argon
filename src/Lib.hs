@@ -123,10 +123,13 @@ instance Parser SubParser where
 -- values.
 popArguments :: Bool -> StreamParser (Token CliParser) [Text]
 popArguments split = lift . state $ \case
-  (Argument s : xs') -> (if split
-                         then T.split (== ',') s
-                         else [s], xs')
-  xs -> ([], xs)
+  (Bound s : xs')    -> (asList s, xs')
+  (Argument s : xs') -> (asList s, xs')
+  xs                 -> ([], xs)
+  where
+    asList s = if split
+               then T.split (== ',') s
+               else [s]
 
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
@@ -167,7 +170,7 @@ instance Parser CliParser where
       argToTokens (T.stripPrefix "--" -> Just s) =
         case keyEqualsValue s of
           Just (k, v) -> [LongOption k, Bound v]
-          Nothing -> [LongOption s]
+          Nothing     -> [LongOption s]
       argToTokens (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = [ShortOption c]
       argToTokens s                                                = [Argument s]
 
