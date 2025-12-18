@@ -249,6 +249,64 @@ instance Resolve CliParser where
   resolve (CliCommand info _) =
     throwError $ "expected " <> show (cmdHead info)
 
+instance Parser CliParser where
+  data Token CliParser
+    = LongOption Text -- ^ A long form flag (e.g. --option)
+    | ShortOption Char -- ^ A short form flag (e.g. -c)
+    | Argument Text -- ^ A freeform argument that is not an option
+    | Escaped Text -- ^ An argument escaped using '--' that can only
+                 -- be consumed by 'CliParameter' parsers.
+    deriving (Show)
+
+  parseTokens args =
+    let (regularArgs, drop 1 -> escapedArgs) = break (== "--") args
+    in fmap argToToken regularArgs <> fmap Escaped escapedArgs
+    where
+      argToToken (T.stripPrefix "--" -> Just s)                   = LongOption s
+      argToToken (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = ShortOption c
+      argToToken s                                                = Argument s
+
+  renderTokens toks = map tokenToArg toks
+    where
+      tokenToArg (LongOption s)  = "--" <> s
+      tokenToArg (ShortOption c) = "-" <> T.singleton c
+      tokenToArg (Argument s)    = s
+      -- TODO: How should we render escaped tokens?
+      tokenToArg (Escaped s)     = s
+
+  accepts (CliParameter _) (Argument _)      = True
+  accepts (CliParameter _) (Escaped _)       = True
+  accepts (CliOption info _) (LongOption s)  = LongFlag s `elem` optFlags info
+  accepts (CliOption info _) (ShortOption c) = ShortFlag c `elem` optFlags info
+  accepts (CliCommand info _) (Argument s)   = s `elem` cmdNames info
+  accepts _ _                                = False
+
+  feedParser (CliParameter (TextParser _ parse)) = do
+    text <- MaybeT peek >>= \case
+      Argument s -> pure s
+      Escaped s  -> pure s
+      _          -> empty
+    lift $ pop *> lift (parse text)
+  feedParser parser@(CliOption _ subtree) = do
+    next <- MaybeT peek
+    guard $ parser `accepts` next
+    void $ lift pop
+
+    -- Collect the next argument in the stream and marshal it into a
+    -- list of tokens for the subcontext
+    let isMultary = all (> 1) $ valency subtree
+    args <- lift $ parseTokens <$> popArguments isMultary
+    (result, _args') <- lift . lift $ withExcept ("CliOption: " <>) $ runParseTree subtree args
+    case renderTokens _args' of
+      (arg:_) -> throwError $ "unrecognized subargument: " <> show arg
+      args'   -> traverse (lift . push . Argument) args' $> result
+  feedParser parser@(CliCommand _ subtree) = do
+    next <- MaybeT peek
+    guard $ parser `accepts` next
+    lift $ pop
+      *> satiate subtree
+      >>= lift . resolve
+
 --------------------------------------------------------------------------------
 -- Feeding the Tree
 
