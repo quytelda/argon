@@ -11,7 +11,6 @@ import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State
-import           Control.Monad.Trans
 import           Control.Monad.Trans.Maybe
 import           Data.Functor
 import           Data.Kind
@@ -97,7 +96,10 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve (MapNode f p)      = fmap f $ resolve p
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
   resolve (SumNode l r)      = resolve l <|> resolve r
-  resolve (ManyNode p)       = pure []
+  resolve (ManyNode _)       = pure []
+  -- TODO: What if the ManyNode contains a resolvable node (e.g.
+  -- `ManyNode (ValueNode 5)`)? Handling it this way avoids infinite
+  -- loops, but might not be the expected behavior.
 
 --------------------------------------------------------------------------------
 -- Stream Monad
@@ -197,7 +199,6 @@ instance Parser SubParser where
     where
       unparse (SubKeyValue k v) = k <> "=" <> v
       unparse (SubArgument s)   = s
-
 
   accepts (SubParameter _) (SubArgument _)   = True
   accepts (SubAssoc key _) (SubKeyValue k _) = key == k
