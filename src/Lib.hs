@@ -14,11 +14,12 @@ import           Control.Monad.State
 import           Control.Monad.Trans.Maybe
 import           Data.Functor
 import           Data.Kind
-import qualified Data.List                 as List
 import           Data.List.NonEmpty        (NonEmpty)
 import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
+
+import           Stream
 
 -- | Valency represents the maxiumum number of arguments a parser
 -- might consume.
@@ -100,29 +101,6 @@ instance Resolve p => Resolve (ParseTree p) where
   -- TODO: What if the ManyNode contains a resolvable node (e.g.
   -- `ManyNode (ValueNode 5)`)? Handling it this way avoids infinite
   -- loops, but might not be the expected behavior.
-
---------------------------------------------------------------------------------
--- Stream Monad
-
--- | A stream parameterized by token type.
-type Stream tok = StateT [tok] (Except String)
-
-runStream :: Stream tok a -> [tok] -> Either String (a, [tok])
-runStream m = runExcept . runStateT m
-
-isEmptyStream :: Stream tok Bool
-isEmptyStream = gets null
-
-pop :: Stream tok (Maybe tok)
-pop = state $ \case
-  [] -> (Nothing, [])
-  (x:xs) -> (Just x, xs)
-
-peek :: Stream tok (Maybe tok)
-peek = gets $ fmap fst . List.uncons
-
-push :: tok -> Stream tok ()
-push s = modify' (s:)
 
 --------------------------------------------------------------------------------
 -- User Interface Descriptions
