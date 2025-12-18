@@ -21,6 +21,12 @@ import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
+-- | Valency represents the maxiumum number of arguments a parser
+-- might consume.
+--
+-- If the valency of a parser is 'Just n', then it consumes up to 'n'
+-- arguments. If the valency is 'Nothing', it can consume an arbitrary
+-- number of arguments.
 class HasValency p where
   valency :: p r -> Maybe Integer
 
@@ -262,7 +268,7 @@ feed (ManyNode tree) =
   <*> pure (ManyNode tree)
 
 -- | Repeatedly feed input to the tree using `feed` until no input is
--- consumed (e.g. `feed` returns Nothing).
+-- no longer consumed.
 satiate :: Parser p => ParseTree p r -> Stream (Token p) (ParseTree p r)
 satiate tree = do
   result <- runMaybeT $ feed tree
