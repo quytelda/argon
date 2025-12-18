@@ -148,12 +148,12 @@ instance Parser SubParser where
     | SubArgument Text -- ^ A standard argument
     deriving (Show)
 
-  parseTokens xs = fmap parse xs
+  parseTokens = fmap parse
     where
       parse (keyEqualsValue -> Just (k, v)) = SubKeyValue k v
       parse s                               = SubArgument s
 
-  renderTokens xs = fmap unparse xs
+  renderTokens = fmap unparse
     where
       unparse (SubKeyValue k v) = k <> "=" <> v
       unparse (SubArgument s)   = s
@@ -262,6 +262,7 @@ instance Parser CliParser where
   feedParser parser@(CliCommand _ subtree) = do
     next <- peekP
     guard $ parser `accepts` next
+
     popP
       *> lift (satiate subtree)
       >>= resolveP
