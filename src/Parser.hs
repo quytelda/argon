@@ -43,3 +43,6 @@ class Resolve p => Parser (p :: Type -> Type) where
 
   accepts :: p r -> Token p -> Bool
   feedParser :: p r -> MaybeT (Stream (Token p)) r
+
+resolveP :: Resolve p => p r -> StreamParser tok r
+resolveP = lift . lift . resolve

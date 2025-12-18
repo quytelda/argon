@@ -112,6 +112,9 @@ cmdHead = NonEmpty.head . cmdNames
 data TextParser r = TextParser Text (Text -> Except String r)
   deriving (Functor)
 
+runTextParser :: TextParser r -> Text -> StreamParser tok r
+runTextParser (TextParser _ parse) = lift . lift . parse
+
 --------------------------------------------------------------------------------
 -- Subargument Parsing
 
@@ -159,13 +162,13 @@ instance Parser SubParser where
   accepts (SubAssoc key _) (SubKeyValue k _) = key == k
   accepts _ _                                = False
 
-  feedParser (SubParameter (TextParser _ parse)) = do
-    MaybeT peek >>= \case
-      SubArgument s -> lift $ pop *> lift (parse s)
+  feedParser (SubParameter tp) = do
+    peekP >>= \case
+      SubArgument s -> popP *> runTextParser tp s
       _             -> empty
-  feedParser (SubAssoc key (TextParser _ parse)) = do
-    MaybeT peek >>= \case
-      SubKeyValue k v | key == k -> lift $ pop *> lift (parse v)
+  feedParser (SubAssoc key tp) = do
+    peekP >>= \case
+      SubKeyValue k v | key == k -> popP *> runTextParser tp v
       _                          -> empty
 
 --------------------------------------------------------------------------------
@@ -176,8 +179,8 @@ instance Parser SubParser where
 -- `popArgument False` should generate a list of 0 or 1 values, while
 -- `popArgument True` comma-splits any argument it finds into multiple
 -- values.
-popArguments :: Bool -> Stream (Token CliParser) [Text]
-popArguments split = state $ \case
+popArguments :: Bool -> StreamParser (Token CliParser) [Text]
+popArguments split = lift . state $ \case
   (Argument s : xs') -> (if split
                          then T.split (== ',') s
                          else [s], xs')
@@ -237,31 +240,31 @@ instance Parser CliParser where
   accepts (CliCommand info _) (Argument s)   = s `elem` cmdNames info
   accepts _ _                                = False
 
-  feedParser (CliParameter (TextParser _ parse)) = do
-    text <- MaybeT peek >>= \case
+  feedParser (CliParameter tp) = do
+    text <- peekP >>= \case
       Argument s -> pure s
       Escaped s  -> pure s
       _          -> empty
-    lift $ pop *> lift (parse text)
+    popP *> runTextParser tp text
   feedParser parser@(CliOption _ subtree) = do
-    next <- MaybeT peek
+    next <- peekP
     guard $ parser `accepts` next
     void $ lift pop
 
     -- Collect the next argument in the stream and marshal it into a
     -- list of tokens for the subcontext
     let isMultary = all (> 1) $ valency subtree
-    args <- lift $ parseTokens <$> popArguments isMultary
-    (result, _args') <- lift . lift $ withExcept ("CliOption: " <>) $ runParseTree subtree args
+    args <- popArguments isMultary <&> parseTokens
+    (result, _args') <- lift . lift $ runParseTree subtree args
     case renderTokens _args' of
       (arg:_) | isMultary -> throwError $ "unrecognized subargument: " <> show arg
-      args'               -> traverse (lift . push . Argument) args' $> result
+      args'               -> traverse (pushP . Argument) args' $> result
   feedParser parser@(CliCommand _ subtree) = do
-    next <- MaybeT peek
+    next <- peekP
     guard $ parser `accepts` next
-    lift $ pop
-      *> satiate subtree
-      >>= lift . resolve
+    popP
+      *> lift (satiate subtree)
+      >>= resolveP
 
 --------------------------------------------------------------------------------
 -- Feeding the Tree
@@ -269,7 +272,7 @@ instance Parser CliParser where
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with
 -- an updated subtree and further traversal ceases.
-feed :: Parser p => ParseTree p r -> MaybeT (Stream (Token p)) (ParseTree p r)
+feed :: Parser p => ParseTree p r -> StreamParser (Token p) (ParseTree p r)
 feed EmptyNode = empty
 feed (ValueNode _) = empty
 feed (ParseNode parser) = ValueNode <$> feedParser parser

@@ -31,3 +31,16 @@ peek = gets $ fmap fst . List.uncons
 
 push :: tok -> Stream tok ()
 push s = modify' (s:)
+
+-- | A Stream where computation might yield an empty result when the
+-- parser doesn't apply.
+type StreamParser tok = MaybeT (Stream tok)
+
+popP :: StreamParser tok tok
+popP = MaybeT pop
+
+peekP :: StreamParser tok tok
+peekP = MaybeT peek
+
+pushP :: tok -> StreamParser tok ()
+pushP = lift . push
