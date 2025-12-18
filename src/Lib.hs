@@ -154,18 +154,22 @@ instance Parser CliParser where
   data Token CliParser
     = LongOption Text -- ^ A long form flag (e.g. --option)
     | ShortOption Char -- ^ A short form flag (e.g. -c)
+    | Bound Text -- ^ A subargument bound to an option (e.g. --opt=ARG)
     | Argument Text -- ^ A freeform argument that is not an option
     | Escaped Text -- ^ An argument escaped using '--' that can only
-                 -- be consumed by 'CliParameter' parsers.
+                   -- be consumed by 'CliParameter' parsers.
     deriving (Show)
 
   parseTokens args =
     let (regularArgs, drop 1 -> escapedArgs) = break (== "--") args
-    in fmap argToToken regularArgs <> fmap Escaped escapedArgs
+    in concatMap argToTokens regularArgs <> fmap Escaped escapedArgs
     where
-      argToToken (T.stripPrefix "--" -> Just s)                   = LongOption s
-      argToToken (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = ShortOption c
-      argToToken s                                                = Argument s
+      argToTokens (T.stripPrefix "--" -> Just s) =
+        case keyEqualsValue s of
+          Just (k, v) -> [LongOption k, Bound v]
+          Nothing -> [LongOption s]
+      argToTokens (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = [ShortOption c]
+      argToTokens s                                                = [Argument s]
 
   renderTokens toks = map tokenToArg toks
     where
