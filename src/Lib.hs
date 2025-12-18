@@ -1,5 +1,4 @@
 {-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
@@ -13,71 +12,14 @@ import           Control.Monad.Except
 import           Control.Monad.State
 import           Control.Monad.Trans.Maybe
 import           Data.Functor
-import           Data.Kind
 import           Data.List.NonEmpty        (NonEmpty)
 import qualified Data.List.NonEmpty        as NonEmpty
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
 import           Parser
+import           ParseTree
 import           Stream
-
---------------------------------------------------------------------------------
--- ParseTree
-
--- | 'ParseTree p r' is an expression tree built from parsers of type
--- 'p' which evaluates to a value of type 'r' supplied with the proper
--- input.
-data ParseTree p r where
-  -- | Terminal node with no value
-  EmptyNode :: ParseTree p r
-  -- | Terminal node with a resolved value
-  ValueNode :: r -> ParseTree p r
-  -- | A parser awaiting input
-  ParseNode :: p r -> ParseTree p r
-  -- | Abstracts fmap
-  MapNode :: (a -> r) -> ParseTree p a -> ParseTree p r
-  -- | Abstracts liftA2
-  ProdNode :: (u -> v -> r) -> ParseTree p u -> ParseTree p v -> ParseTree p r
-  -- | Abstracts (<|>)
-  SumNode :: ParseTree p r -> ParseTree p r -> ParseTree p r
-  -- | Abstracts many
-  ManyNode :: ParseTree p r -> ParseTree p [r]
-
-instance Functor (ParseTree p) where
-  fmap f = MapNode f
-
-instance Applicative (ParseTree p) where
-  pure = ValueNode
-  liftA2 = ProdNode
-
-instance Alternative (ParseTree p) where
-  empty = EmptyNode
-  (<|>) = SumNode
-  many = ManyNode
-
-instance HasValency p => HasValency (ParseTree p) where
-  valency EmptyNode        = Just 0
-  valency (ValueNode _)    = Just 0
-  valency (ParseNode p)    = valency p
-  valency (MapNode _ p)    = valency p
-  valency (ProdNode _ l r) = (+) <$> valency l <*> valency r
-  valency (SumNode l r)    = max <$> valency l <*> valency r
-  valency (ManyNode p)     = case valency p of
-                               Just n | n <= 0 -> Just 0
-                               _               -> Nothing
-
-instance Resolve p => Resolve (ParseTree p) where
-  resolve EmptyNode          = throwError "empty"
-  resolve (ValueNode value)  = pure value
-  resolve (ParseNode parser) = resolve parser
-  resolve (MapNode f p)      = fmap f $ resolve p
-  resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
-  resolve (SumNode l r)      = resolve l <|> resolve r
-  resolve (ManyNode _)       = pure []
-  -- TODO: What if the ManyNode contains a resolvable node (e.g.
-  -- `ManyNode (ValueNode 5)`)? Handling it this way avoids infinite
-  -- loops, but might not be the expected behavior.
 
 --------------------------------------------------------------------------------
 -- User Interface Descriptions

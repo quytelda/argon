@@ -27,6 +27,7 @@ library
   exposed-modules:
       Lib
       Parser
+      ParseTree
       Stream
   other-modules:
       Paths_argon
