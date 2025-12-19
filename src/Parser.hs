@@ -18,7 +18,7 @@ import           Data.Kind
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
-import           Stream
+import           StreamParser
 
 -- | Valency represents the maxiumum number of arguments a parser
 -- might consume.
@@ -45,7 +45,4 @@ class Resolve p => Parser (p :: Type -> Type) where
   parseTokens :: [Text] -> [Token p]
 
   accepts :: p r -> Token p -> Bool
-  feedParser :: p r -> MaybeT (Stream (Token p)) r
-
-resolveP :: Resolve p => p r -> StreamParser tok r
-resolveP = lift . lift . resolve
+  feedParser :: p r -> StreamParser (Token p) r

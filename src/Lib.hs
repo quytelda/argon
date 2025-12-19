@@ -19,7 +19,7 @@ import qualified Data.Text            as T
 
 import           Parser
 import           ParseTree
-import           Stream
+import           StreamParser
 import           Text
 
 --------------------------------------------------------------------------------
@@ -63,7 +63,7 @@ parserHint :: TextParser r -> Text
 parserHint (TextParser hint _) = hint
 
 runTextParser :: TextParser r -> Text -> StreamParser tok r
-runTextParser (TextParser _ parse) = lift . lift . parse
+runTextParser (TextParser _ parse) = liftExcept . parse
 
 --------------------------------------------------------------------------------
 -- Subargument Parsing
@@ -124,12 +124,12 @@ instance Parser SubParser where
   accepts _ _                                = False
 
   feedParser (SubParameter tp) = do
-    peekP >>= \case
-      SubArgument s -> popP *> runTextParser tp s
+    peek >>= \case
+      SubArgument s -> pop *> runTextParser tp s
       _             -> empty
   feedParser (SubAssoc key tp) = do
-    peekP >>= \case
-      SubKeyValue k v | key == k -> popP *> runTextParser tp v
+    peek >>= \case
+      SubKeyValue k v | key == k -> pop *> runTextParser tp v
       _                          -> empty
 
 instance Render (Token SubParser) where
@@ -138,21 +138,6 @@ instance Render (Token SubParser) where
 
 --------------------------------------------------------------------------------
 -- Top-level CLI Parsing
-
--- | If the next token in the stream is an 'Argument', pop it and
--- convert it into an argument list that can be passed to a subparser.
--- `popArgument False` should generate a list of 0 or 1 values, while
--- `popArgument True` comma-splits any argument it finds into multiple
--- values.
-popArguments :: Bool -> StreamParser (Token CliParser) [Text]
-popArguments split = lift . state $ \case
-  (Bound s : xs')    -> (asList s, xs')
-  (Argument s : xs') -> (asList s, xs')
-  xs                 -> ([], xs)
-  where
-    asList s = if split
-               then T.split (== ',') s
-               else [s]
 
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
@@ -221,15 +206,15 @@ instance Parser CliParser where
   accepts _ _                                = False
 
   feedParser (CliParameter tp) = do
-    text <- peekP >>= \case
+    text <- peek >>= \case
       Argument s -> pure s
       Escaped s  -> pure s
       _          -> empty
-    popP *> runTextParser tp text
+    pop *> runTextParser tp text
   feedParser parser@(CliOption _ subtree) = do
-    next <- peekP
+    next <- peek
     guard $ parser `accepts` next
-    void $ lift pop
+    void $ popMaybe
 
     -- Collect arguments for the subparser's stream from the next
     -- argument in the parent stream.
@@ -237,7 +222,7 @@ instance Parser CliParser where
                    then T.split (== ',') s
                    else [s]
 
-    args <- lift peek <&> \case
+    args <- peekMaybe <&> \case
       Just (Bound s)    -> asList s
       Just (Argument s) -> asList s
       _                 -> []
@@ -249,22 +234,22 @@ instance Parser CliParser where
     -- the from the parent stream. However, we cannot remove partially
     -- consumed input, so in that case we throw an error.
     when (length args /= length leftovers) $
-      popP *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> show arg) leftovers
+      pop *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> show arg) leftovers
 
     -- Ensure we are not leaving an unconsumed bound argument at the
     -- head of the stream.
-    lift peek >>= \case
+    peekMaybe >>= \case
       Just (Bound s) -> throwError $ "unrecognized subargument: " <> show s
       _ -> pure ()
 
     pure result
   feedParser parser@(CliCommand _ subtree) = do
-    next <- peekP
+    next <- peek
     guard $ parser `accepts` next
 
-    popP
-      *> lift (satiate subtree)
-      >>= resolveP
+    pop
+      *> satiate subtree
+      >>= liftExcept . resolve
 
 instance Render (ParseTree CliParser r) where
   -- special cases

@@ -16,7 +16,7 @@ import           Data.Text                 (Text)
 import qualified Data.Text                 as T
 
 import           Parser
-import           Stream
+import           StreamParser
 
 -- | 'ParseTree p r' is an expression tree built from parsers of type
 -- 'p' which evaluates to a value of type 'r' supplied with the proper
@@ -93,9 +93,9 @@ feed (ManyNode tree) =
 
 -- | Repeatedly feed input to the tree using `feed` until no input is
 -- no longer consumed.
-satiate :: Parser p => ParseTree p r -> Stream (Token p) (ParseTree p r)
+satiate :: Parser p => ParseTree p r -> StreamParser (Token p) (ParseTree p r)
 satiate tree = do
-  result <- runMaybeT $ feed tree
+  result <- optional $ feed tree
   case result of
     Just tree' -> satiate tree'
     Nothing    -> pure tree
@@ -106,9 +106,12 @@ runParseTree
   -> [Token p]
   -> Except String (r, [Token p])
 runParseTree tree args = do
-  (tree', args') <- runStateT (satiate tree) args
-  result <- resolve tree'
-  return (result, args')
+  case runStreamParser (satiate tree) args of
+    ParseError err -> throwError err
+    ParseEmpty _   -> throwError "empty"
+    ParseResult args' tree' -> do
+      result <- resolve tree'
+      return (result, args')
 
 parseArguments
   :: Parser p
