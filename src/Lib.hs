@@ -200,14 +200,33 @@ instance Parser CliParser where
     guard $ parser `accepts` next
     void $ lift pop
 
-    -- Collect the next argument in the stream and marshal it into a
-    -- list of tokens for the subcontext
-    let isMultary = all (> 1) $ valency subtree
-    args <- popArguments isMultary <&> parseTokens
-    (result, _args') <- lift . lift $ runParseTree subtree args
-    case renderTokens _args' of
-      (arg:_) | isMultary -> throwError $ "unrecognized subargument: " <> show arg
-      args'               -> traverse (pushP . Argument) args' $> result
+    -- Collect arguments for the subparser's stream from the next
+    -- argument in the parent stream.
+    let asList s = if multary subtree
+                   then T.split (== ',') s
+                   else [s]
+
+    args <- lift peek <&> \case
+      Just (Bound s)    -> asList s
+      Just (Argument s) -> asList s
+      _                 -> []
+
+    -- Evaluate the subparser in a new stream context.
+    (result, args') <- liftEither $ parseArguments subtree args
+
+    -- If the subparser consumed its input, we can safely remove it
+    -- the from the parent stream. However, we cannot remove partially
+    -- consumed input, so in that case we throw an error.
+    when (args /= args') $
+      popP *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> show arg) args'
+
+    -- Ensure we are not leaving an unconsumed bound argument at the
+    -- head of the stream.
+    lift peek >>= \case
+      Just (Bound s) -> throwError $ "unrecognized subargument: " <> show s
+      _ -> pure ()
+
+    pure result
   feedParser parser@(CliCommand _ subtree) = do
     next <- peekP
     guard $ parser `accepts` next
@@ -261,8 +280,7 @@ parseArguments
   :: Parser p
   => ParseTree p r
   -> [Text]
-  -> Either String (r, [Token p])
-parseArguments tree =
-  runExcept
-  . runParseTree tree
-  . parseTokens
+  -> Either String (r, [Text])
+parseArguments tree args = runExcept $ do
+  (result, tokens) <- runParseTree tree $ parseTokens args
+  pure (result, renderTokens tokens)
