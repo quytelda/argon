@@ -188,7 +188,7 @@ instance Parser CliParser where
 
     -- Collect arguments for the subparser's stream from the next
     -- argument in the parent stream.
-    let asList s = if multary subtree
+    let asList s = if valencyIs (> 1) subtree
                    then T.split (== ',') s
                    else [s]
 

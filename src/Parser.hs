@@ -29,10 +29,9 @@ import           Stream
 class HasValency p where
   valency :: p r -> Maybe Integer
 
-  -- | Utility function to check whether or not something has multiple
-  -- arguments.
-  multary :: p r -> Bool
-  multary = all (> 1) . valency
+-- | Utility function to check how many arguments something supports.
+valencyIs :: HasValency p => (Integer -> Bool) -> p r -> Bool
+valencyIs pred = all pred . valency
 
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
