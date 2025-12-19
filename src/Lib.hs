@@ -96,6 +96,18 @@ instance Render (SubParser r) where
   render (SubParameter tp) = render $ parserHint tp
   render (SubAssoc key tp) = render key <> "=" <> render (parserHint tp)
 
+instance Render (ParseTree SubParser r) where
+  -- special cases
+  render (SumNode p (ValueNode _)) = "[" <> render p <> "]"
+
+  render EmptyNode                 = "EMPTY"
+  render (ValueNode _)             = "VALUE"
+  render (ParseNode parser)        = render parser
+  render (MapNode _ p)             = render p
+  render (ProdNode _ l r)          = render l <> "," <> render r
+  render (SumNode l r)             = render l <> " | " <> render r
+  render (ManyNode p)              = "[" <> render p <> "...]"
+
 instance Parser SubParser where
   data Token SubParser
     = SubKeyValue Text Text -- ^ A key=value argument
@@ -148,6 +160,15 @@ data CliParser r
   | CliOption OptionInfo (ParseTree SubParser r)
   | CliCommand CommandInfo (ParseTree CliParser r)
   deriving (Functor)
+
+instance Render (CliParser r) where
+  render (CliParameter tp) = render $ parserHint tp
+  render (CliOption info subtree) = render (optHead info)
+                                     <> if valencyIs (> 0) subtree
+                                        then "=" <> render subtree
+                                        else mempty
+  render (CliCommand info subtree) = "{" <> render (cmdHead info) <> " "
+                                      <> render subtree <> "}"
 
 instance HasValency CliParser where
   valency (CliParameter _) = Just 1
@@ -244,3 +265,15 @@ instance Parser CliParser where
     popP
       *> lift (satiate subtree)
       >>= resolveP
+
+instance Render (ParseTree CliParser r) where
+  -- special cases
+  render (SumNode p (ValueNode _)) = "[" <> render p <> "]"
+
+  render EmptyNode                 = "EMPTY"
+  render (ValueNode _)             = "VALUE"
+  render (ParseNode parser)        = render parser
+  render (MapNode _ p)             = render p
+  render (ProdNode _ l r)          = render l <> " " <> render r
+  render (SumNode l r)             = render l <> " | " <> render r
+  render (ManyNode p)              = "[" <> render p <> "...]"
