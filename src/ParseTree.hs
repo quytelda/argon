@@ -21,7 +21,7 @@ import           Stream
 -- | 'ParseTree p r' is an expression tree built from parsers of type
 -- 'p' which evaluates to a value of type 'r' supplied with the proper
 -- input.
-data ParseTree p r where
+data ParseTree (p :: Type -> Type) (r :: Type) where
   -- | Terminal node with no value
   EmptyNode :: ParseTree p r
   -- | Terminal node with a resolved value
