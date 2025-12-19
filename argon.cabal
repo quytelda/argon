@@ -28,7 +28,6 @@ library
       Lib
       Parser
       ParseTree
-      Stream
       StreamParser
       Text
   other-modules:
