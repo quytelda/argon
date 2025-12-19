@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
@@ -11,14 +12,15 @@ import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.Functor
-import           Data.List.NonEmpty        (NonEmpty)
-import qualified Data.List.NonEmpty        as NonEmpty
-import           Data.Text                 (Text)
-import qualified Data.Text                 as T
+import           Data.List.NonEmpty   (NonEmpty)
+import qualified Data.List.NonEmpty   as NonEmpty
+import           Data.Text            (Text)
+import qualified Data.Text            as T
 
 import           Parser
 import           ParseTree
 import           Stream
+import           Text
 
 --------------------------------------------------------------------------------
 -- User Interface Descriptions
@@ -27,6 +29,10 @@ data Flag
   = LongFlag Text
   | ShortFlag Char
   deriving (Eq, Show)
+
+instance Render Flag where
+  render (LongFlag s)  = "--" <> render s
+  render (ShortFlag c) = "-" <> render c
 
 data OptionInfo = OptionInfo
   { optFlags :: NonEmpty Flag
@@ -52,6 +58,9 @@ cmdHead = NonEmpty.head . cmdNames
 
 data TextParser r = TextParser Text (Text -> Except String r)
   deriving (Functor)
+
+parserHint :: TextParser r -> Text
+parserHint (TextParser hint _) = hint
 
 runTextParser :: TextParser r -> Text -> StreamParser tok r
 runTextParser (TextParser _ parse) = lift . lift . parse
@@ -83,6 +92,10 @@ instance Resolve SubParser where
   resolve (SubAssoc key (TextParser hint _)) =
     throwError $ "expected " <> T.unpack key <> "=" <> T.unpack hint
 
+instance Render (SubParser r) where
+  render (SubParameter tp) = render $ parserHint tp
+  render (SubAssoc key tp) = render key <> "=" <> render (parserHint tp)
+
 instance Parser SubParser where
   data Token SubParser
     = SubKeyValue Text Text -- ^ A key=value argument
@@ -106,6 +119,10 @@ instance Parser SubParser where
     peekP >>= \case
       SubKeyValue k v | key == k -> popP *> runTextParser tp v
       _                          -> empty
+
+instance Render (Token SubParser) where
+  render (SubKeyValue k v) = render k <> "=" <> render v
+  render (SubArgument s)   = render s
 
 --------------------------------------------------------------------------------
 -- Top-level CLI Parsing
@@ -146,6 +163,13 @@ instance Resolve CliParser where
     throwError $ "expected " <> show (optHead info)
   resolve (CliCommand info _) =
     throwError $ "expected " <> show (cmdHead info)
+
+instance Render (Token CliParser) where
+  render (LongOption s)  = "--" <> render s
+  render (ShortOption c) = "-" <> render c
+  render (Bound s)       = "subargument \"" <> render s <> "\""
+  render (Argument s)    = render s
+  render (Escaped s)     = render s
 
 instance Parser CliParser where
   data Token CliParser
