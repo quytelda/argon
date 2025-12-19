@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE DeriveFunctor         #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE TypeFamilies          #-}
 
 module StreamParser where
 
@@ -53,6 +54,13 @@ instance Monad (StreamParser tok) where
       ParseResult s' a -> runStreamParser (f a) s'
       ParseEmpty s'    -> ParseEmpty s'
       ParseError e     -> ParseError e
+
+instance MonadError String (StreamParser tok) where
+  throwError err = StreamParser $ \_ -> ParseError err
+  catchError ma handler = StreamParser $ \s ->
+    case runStreamParser ma s of
+      ParseError err -> runStreamParser (handler err) s
+      result         -> result
 
 --------------------------------------------------------------------------------
 
