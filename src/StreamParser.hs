@@ -1,0 +1,84 @@
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
+
+module StreamParser where
+
+import           Control.Applicative
+import           Control.Monad
+import           Control.Monad.Except
+import           Control.Monad.State
+import           Data.Functor
+import           Data.List.NonEmpty   (NonEmpty)
+import qualified Data.List.NonEmpty   as NonEmpty
+import           Data.Text            (Text)
+import qualified Data.Text            as T
+
+data ParseResult tok a
+  = ParseResult [tok] a
+  | ParseEmpty [tok]
+  | ParseError Text
+  deriving (Functor)
+
+instance Semigroup (ParseResult tok a) where
+  l <> r =
+    case (l, r) of
+      (ParseError _, _)    -> l
+      (_, ParseError _)    -> r
+      (ParseEmpty _, _)    -> r
+      (ParseResult _ _, _) -> l
+
+newtype StreamParser tok a = StreamParser { runStreamParser :: [tok] -> ParseResult tok a }
+  deriving (Functor)
+
+instance Applicative (StreamParser tok) where
+  pure a = StreamParser $ \s -> ParseResult s a
+  mf <*> ma = StreamParser $ \s1 ->
+    case runStreamParser mf s1 of
+      ParseResult s2 f -> f <$> runStreamParser ma s2
+      ParseEmpty s2    -> ParseEmpty s2
+      ParseError e     -> ParseError e
+
+instance Alternative (StreamParser tok) where
+  empty = StreamParser $ \s -> ParseEmpty s
+  l <|> r = StreamParser $ \s ->
+    runStreamParser l s <> runStreamParser r s
+
+instance Monad (StreamParser tok) where
+  return = pure
+  mf >>= f = StreamParser $ \s ->
+    case runStreamParser mf s of
+      ParseResult s' a -> runStreamParser (f a) s'
+      ParseEmpty s'    -> ParseEmpty s'
+      ParseError e     -> ParseError e
+
+--------------------------------------------------------------------------------
+
+popMaybe :: StreamParser tok (Maybe tok)
+popMaybe = StreamParser $ \ts ->
+  case ts of
+    (t:ts') -> ParseResult ts' $ Just t
+    _       -> ParseResult ts Nothing
+
+peekMaybe :: StreamParser tok (Maybe tok)
+peekMaybe = StreamParser $ \ts ->
+  case ts of
+    (t:_) -> ParseResult ts $ Just t
+    _     -> ParseResult ts Nothing
+
+pop :: StreamParser tok tok
+pop = StreamParser $ \ts ->
+  case ts of
+    (t:ts') -> ParseResult ts' t
+    _       -> ParseEmpty ts
+
+peek :: StreamParser tok tok
+peek = StreamParser $ \ts ->
+  case ts of
+    (t:_) -> ParseResult ts t
+    _     -> ParseEmpty ts
+
+push :: tok -> StreamParser tok ()
+push t = StreamParser $ \ts -> ParseResult (t:ts) ()

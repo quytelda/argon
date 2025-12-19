@@ -29,6 +29,7 @@ library
       Parser
       ParseTree
       Stream
+      StreamParser
       Text
   other-modules:
       Paths_argon
