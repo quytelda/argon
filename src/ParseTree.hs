@@ -114,7 +114,7 @@ parseArguments
   :: Parser p
   => ParseTree p r
   -> [Text]
-  -> Either String (r, [Text])
+  -> Either String (r, [Token p])
 parseArguments tree args = runExcept $ do
   (result, tokens) <- runParseTree tree $ parseTokens args
-  pure (result, renderTokens tokens)
+  pure (result, tokens)

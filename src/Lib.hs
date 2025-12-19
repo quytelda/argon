@@ -94,11 +94,6 @@ instance Parser SubParser where
       parse (keyEqualsValue -> Just (k, v)) = SubKeyValue k v
       parse s                               = SubArgument s
 
-  renderTokens = fmap unparse
-    where
-      unparse (SubKeyValue k v) = k <> "=" <> v
-      unparse (SubArgument s)   = s
-
   accepts (SubParameter _) (SubArgument _)   = True
   accepts (SubAssoc key _) (SubKeyValue k _) = key == k
   accepts _ _                                = False
@@ -173,14 +168,6 @@ instance Parser CliParser where
       argToTokens (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = [ShortOption c]
       argToTokens s                                                = [Argument s]
 
-  renderTokens toks = map tokenToArg toks
-    where
-      tokenToArg (LongOption s)  = "--" <> s
-      tokenToArg (ShortOption c) = "-" <> T.singleton c
-      tokenToArg (Argument s)    = s
-      -- TODO: How should we render escaped tokens?
-      tokenToArg (Escaped s)     = s
-
   accepts (CliParameter _) (Argument _)      = True
   accepts (CliParameter _) (Escaped _)       = True
   accepts (CliOption info _) (LongOption s)  = LongFlag s `elem` optFlags info
@@ -211,13 +198,13 @@ instance Parser CliParser where
       _                 -> []
 
     -- Evaluate the subparser in a new stream context.
-    (result, args') <- liftEither $ parseArguments subtree args
+    (result, leftovers) <- liftEither $ parseArguments subtree args
 
     -- If the subparser consumed its input, we can safely remove it
     -- the from the parent stream. However, we cannot remove partially
     -- consumed input, so in that case we throw an error.
-    when (args /= args') $
-      popP *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> show arg) args'
+    when (length args /= length leftovers) $
+      popP *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> show arg) leftovers
 
     -- Ensure we are not leaving an unconsumed bound argument at the
     -- head of the stream.

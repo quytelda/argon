@@ -44,7 +44,6 @@ class Resolve f where
 class Resolve p => Parser (p :: Type -> Type) where
   data Token p
   parseTokens :: [Text] -> [Token p]
-  renderTokens :: [Token p] -> [Text]
 
   accepts :: p r -> Token p -> Bool
   feedParser :: p r -> MaybeT (Stream (Token p)) r
