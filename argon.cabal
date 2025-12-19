@@ -29,6 +29,7 @@ library
       Parser
       ParseTree
       Stream
+      Text
   other-modules:
       Paths_argon
   autogen-modules:
