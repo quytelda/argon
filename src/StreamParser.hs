@@ -19,7 +19,7 @@ import qualified Data.Text            as T
 data ParseResult tok a
   = ParseResult [tok] a
   | ParseEmpty [tok]
-  | ParseError Text
+  | ParseError String
   deriving (Functor)
 
 instance Semigroup (ParseResult tok a) where
@@ -82,3 +82,11 @@ peek = StreamParser $ \ts ->
 
 push :: tok -> StreamParser tok ()
 push t = StreamParser $ \ts -> ParseResult (t:ts) ()
+
+--------------------------------------------------------------------------------
+
+liftExcept :: Except String a -> StreamParser tok a
+liftExcept m = StreamParser $ \ts ->
+  case runExcept m of
+    Left e  -> ParseError e
+    Right a -> ParseResult ts a
