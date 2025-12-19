@@ -14,6 +14,7 @@ import           Control.Monad.Trans.Maybe
 import           Data.Kind
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
+import qualified Data.Text.Lazy.Builder    as TBL
 
 import           Parser
 import           StreamParser
@@ -104,7 +105,7 @@ runParseTree
   :: Parser p
   => ParseTree p r
   -> [Token p]
-  -> Except String (r, [Token p])
+  -> Except TBL.Builder (r, [Token p])
 runParseTree tree args = do
   case runStreamParser (satiate tree) args of
     ParseError err -> throwError err
@@ -117,7 +118,7 @@ parseArguments
   :: Parser p
   => ParseTree p r
   -> [Text]
-  -> Either String (r, [Token p])
+  -> Either TBL.Builder (r, [Token p])
 parseArguments tree args = runExcept $ do
   (result, tokens) <- runParseTree tree $ parseTokens args
   pure (result, tokens)

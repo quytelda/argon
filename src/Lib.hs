@@ -16,6 +16,7 @@ import           Data.List.NonEmpty   (NonEmpty)
 import qualified Data.List.NonEmpty   as NonEmpty
 import           Data.Text            (Text)
 import qualified Data.Text            as T
+import qualified Data.Text.Lazy.Builder as TBL
 
 import           Parser
 import           ParseTree
@@ -56,7 +57,7 @@ cmdHead = NonEmpty.head . cmdNames
 --------------------------------------------------------------------------------
 -- Basic Parser
 
-data TextParser r = TextParser Text (Text -> Except String r)
+data TextParser r = TextParser Text (Text -> Except TBL.Builder r)
   deriving (Functor)
 
 parserHint :: TextParser r -> Text
@@ -88,9 +89,9 @@ instance HasValency SubParser where
 
 instance Resolve SubParser where
   resolve (SubParameter (TextParser hint _)) =
-    throwError $ "expected " <> T.unpack hint
+    throwError $ "expected " <> TBL.fromText hint
   resolve (SubAssoc key (TextParser hint _)) =
-    throwError $ "expected " <> T.unpack key <> "=" <> T.unpack hint
+    throwError $ "expected " <> TBL.fromText key <> "=" <> TBL.fromText hint
 
 instance Render (SubParser r) where
   render (SubParameter tp) = render $ parserHint tp
@@ -164,11 +165,11 @@ instance HasValency CliParser where
 
 instance Resolve CliParser where
   resolve (CliParameter (TextParser hint _)) =
-    throwError $ "expected " <> T.unpack hint
+    throwError $ "expected " <> TBL.fromText hint
   resolve (CliOption info _) =
-    throwError $ "expected " <> show (optHead info)
+    throwError $ "expected " <> render (optHead info)
   resolve (CliCommand info _) =
-    throwError $ "expected " <> show (cmdHead info)
+    throwError $ "expected " <> render (cmdHead info)
 
 instance Render (Token CliParser) where
   render (LongOption s)  = "--" <> render s
@@ -234,12 +235,12 @@ instance Parser CliParser where
     -- the from the parent stream. However, we cannot remove partially
     -- consumed input, so in that case we throw an error.
     when (length args /= length leftovers) $
-      pop *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> show arg) leftovers
+      pop *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> render arg) leftovers
 
     -- Ensure we are not leaving an unconsumed bound argument at the
     -- head of the stream.
     peekMaybe >>= \case
-      Just (Bound s) -> throwError $ "unrecognized subargument: " <> show s
+      Just (Bound s) -> throwError $ "unrecognized subargument: " <> render s
       _ -> pure ()
 
     pure result

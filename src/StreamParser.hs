@@ -12,15 +12,16 @@ import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State
 import           Data.Functor
-import           Data.List.NonEmpty   (NonEmpty)
-import qualified Data.List.NonEmpty   as NonEmpty
-import           Data.Text            (Text)
-import qualified Data.Text            as T
+import           Data.List.NonEmpty     (NonEmpty)
+import qualified Data.List.NonEmpty     as NonEmpty
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import qualified Data.Text.Lazy.Builder as TBL
 
 data ParseResult tok a
   = ParseResult [tok] a
   | ParseEmpty [tok]
-  | ParseError String
+  | ParseError TBL.Builder
   deriving (Functor)
 
 instance Semigroup (ParseResult tok a) where
@@ -55,7 +56,7 @@ instance Monad (StreamParser tok) where
       ParseEmpty s'    -> ParseEmpty s'
       ParseError e     -> ParseError e
 
-instance MonadError String (StreamParser tok) where
+instance MonadError TBL.Builder (StreamParser tok) where
   throwError err = StreamParser $ \_ -> ParseError err
   catchError ma handler = StreamParser $ \s ->
     case runStreamParser ma s of
@@ -93,7 +94,7 @@ push t = StreamParser $ \ts -> ParseResult (t:ts) ()
 
 --------------------------------------------------------------------------------
 
-liftExcept :: Except String a -> StreamParser tok a
+liftExcept :: Except TBL.Builder a -> StreamParser tok a
 liftExcept m = StreamParser $ \ts ->
   case runExcept m of
     Left e  -> ParseError e

@@ -17,6 +17,7 @@ import           Data.Functor
 import           Data.Kind
 import           Data.Text                 (Text)
 import qualified Data.Text                 as T
+import qualified Data.Text.Lazy.Builder as TBL
 
 import           StreamParser
 
@@ -36,7 +37,7 @@ valencyIs pred = all pred . valency
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
 class Resolve f where
-  resolve :: f r -> Except String r
+  resolve :: f r -> Except TBL.Builder r
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.
