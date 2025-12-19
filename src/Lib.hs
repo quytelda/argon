@@ -10,7 +10,6 @@ import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
 import           Control.Monad.State
-import           Control.Monad.Trans.Maybe
 import           Data.Functor
 import           Data.List.NonEmpty        (NonEmpty)
 import qualified Data.List.NonEmpty        as NonEmpty
@@ -234,53 +233,3 @@ instance Parser CliParser where
     popP
       *> lift (satiate subtree)
       >>= resolveP
-
---------------------------------------------------------------------------------
--- Feeding the Tree
-
--- | 'feed' traverses the tree until it activates a parser that
--- consumes input. Once a subtree consumes input, it is replaced with
--- an updated subtree and further traversal ceases.
-feed :: Parser p => ParseTree p r -> StreamParser (Token p) (ParseTree p r)
-feed EmptyNode = empty
-feed (ValueNode _) = empty
-feed (ParseNode parser) = ValueNode <$> feedParser parser
-feed (MapNode f tree) = MapNode f <$> feed tree
-feed (ProdNode f l r) =
-  (ProdNode f <$> feed l <*> pure r) <|>
-  (ProdNode f l <$> feed r)
-feed (SumNode l r) =
-  (SumNode <$> feed l <*> pure r) <|>
-  (SumNode l <$> feed r)
-feed (ManyNode tree) =
-  ProdNode (:)
-  <$> feed tree
-  <*> pure (ManyNode tree)
-
--- | Repeatedly feed input to the tree using `feed` until no input is
--- no longer consumed.
-satiate :: Parser p => ParseTree p r -> Stream (Token p) (ParseTree p r)
-satiate tree = do
-  result <- runMaybeT $ feed tree
-  case result of
-    Just tree' -> satiate tree'
-    Nothing    -> pure tree
-
-runParseTree
-  :: Parser p
-  => ParseTree p r
-  -> [Token p]
-  -> Except String (r, [Token p])
-runParseTree tree args = do
-  (tree', args') <- runStateT (satiate tree) args
-  result <- resolve tree'
-  return (result, args')
-
-parseArguments
-  :: Parser p
-  => ParseTree p r
-  -> [Text]
-  -> Either String (r, [Text])
-parseArguments tree args = runExcept $ do
-  (result, tokens) <- runParseTree tree $ parseTokens args
-  pure (result, renderTokens tokens)
