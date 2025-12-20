@@ -12,30 +12,33 @@ import           Control.Monad.Except
 import           Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as TBL
 
+type Context = Builder
+
 data ParseResult tok a
-  = ParseResult [tok] a
-  | ParseEmpty [tok]
-  | ParseError Builder
+  = ParseResult [Context] [tok] a
+  | ParseEmpty [Context] [tok]
+  | ParseError [Context] Builder
   deriving (Functor)
 
 instance Semigroup (ParseResult tok a) where
   l <> r =
     case (l, r) of
-      (ParseError _, _)    -> l
-      (_, ParseError _)    -> r
-      (ParseEmpty _, _)    -> r
-      (ParseResult _ _, _) -> l
+      (ParseError _ _, _)    -> l
+      (_, ParseError _ _)    -> r
+      (ParseEmpty _ _, _)    -> r
+      (ParseResult _ _ _, _) -> l
 
-newtype StreamParser tok a = StreamParser { runStreamParser :: [tok] -> ParseResult tok a }
+newtype StreamParser tok a = StreamParser
+  { runStreamParser :: [Context] -> [tok] -> ParseResult tok a }
   deriving (Functor)
 
 instance Applicative (StreamParser tok) where
-  pure a = StreamParser $ \s -> ParseResult s a
-  mf <*> ma = StreamParser $ \s1 ->
-    case runStreamParser mf s1 of
-      ParseResult s2 f -> f <$> runStreamParser ma s2
-      ParseEmpty s2    -> ParseEmpty s2
-      ParseError e     -> ParseError e
+  pure a = StreamParser $ \cs ts -> ParseResult cs ts a
+  mf <*> ma = StreamParser $ \cs ts ->
+    case runStreamParser mf cs ts of
+      ParseResult cs' ts' f -> f <$> runStreamParser ma cs' ts'
+      ParseEmpty cs' ts'    -> ParseEmpty cs' ts'
+      ParseError cs' err    -> ParseError cs' err
 
 instance Alternative (StreamParser tok) where
   empty = StreamParser $ \s -> ParseEmpty s
@@ -44,52 +47,52 @@ instance Alternative (StreamParser tok) where
 
 instance Monad (StreamParser tok) where
   return = pure
-  mf >>= f = StreamParser $ \s ->
-    case runStreamParser mf s of
-      ParseResult s' a -> runStreamParser (f a) s'
-      ParseEmpty s'    -> ParseEmpty s'
-      ParseError e     -> ParseError e
+  mf >>= f = StreamParser $ \cs ts ->
+    case runStreamParser mf cs ts of
+      ParseResult cs' ts' a -> runStreamParser (f a) cs' ts'
+      ParseEmpty cs' ts'    -> ParseEmpty cs' ts'
+      ParseError cs' e      -> ParseError cs' e
 
 instance MonadError Builder (StreamParser tok) where
-  throwError err = StreamParser $ \_ -> ParseError err
-  catchError ma handler = StreamParser $ \s ->
-    case runStreamParser ma s of
-      ParseError err -> runStreamParser (handler err) s
-      result         -> result
+  throwError err = StreamParser $ \cs _ -> ParseError cs err
+  catchError ma handler = StreamParser $ \cs ts ->
+    case runStreamParser ma cs ts of
+      ParseError cs' err -> runStreamParser (handler err) cs' ts
+      result             -> result
 
 --------------------------------------------------------------------------------
 
 popMaybe :: StreamParser tok (Maybe tok)
-popMaybe = StreamParser $ \ts ->
+popMaybe = StreamParser $ \cs ts ->
   case ts of
-    (t:ts') -> ParseResult ts' $ Just t
-    _       -> ParseResult ts Nothing
+    (t:ts') -> ParseResult cs ts' $ Just t
+    _       -> ParseResult cs ts Nothing
 
 peekMaybe :: StreamParser tok (Maybe tok)
-peekMaybe = StreamParser $ \ts ->
+peekMaybe = StreamParser $ \cs ts ->
   case ts of
-    (t:_) -> ParseResult ts $ Just t
-    _     -> ParseResult ts Nothing
+    (t:_) -> ParseResult cs ts $ Just t
+    _     -> ParseResult cs ts Nothing
 
 pop :: StreamParser tok tok
-pop = StreamParser $ \ts ->
+pop = StreamParser $ \cs ts ->
   case ts of
-    (t:ts') -> ParseResult ts' t
-    _       -> ParseEmpty ts
+    (t:ts') -> ParseResult cs ts' t
+    _       -> ParseEmpty cs ts
 
 peek :: StreamParser tok tok
-peek = StreamParser $ \ts ->
+peek = StreamParser $ \cs ts ->
   case ts of
-    (t:_) -> ParseResult ts t
-    _     -> ParseEmpty ts
+    (t:_) -> ParseResult cs ts t
+    _     -> ParseEmpty cs ts
 
 push :: tok -> StreamParser tok ()
-push t = StreamParser $ \ts -> ParseResult (t:ts) ()
+push t = StreamParser $ \cs ts -> ParseResult cs (t:ts) ()
 
 --------------------------------------------------------------------------------
 
 liftExcept :: Except Builder a -> StreamParser tok a
-liftExcept m = StreamParser $ \ts ->
+liftExcept m = StreamParser $ \cs ts ->
   case runExcept m of
-    Left e  -> ParseError e
-    Right a -> ParseResult ts a
+    Left err -> ParseError cs err
+    Right a  -> ParseResult cs ts a

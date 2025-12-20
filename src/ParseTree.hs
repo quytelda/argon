@@ -10,8 +10,9 @@ module ParseTree where
 import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
-import           Data.Text                 (Text)
-import qualified Data.Text.Lazy.Builder    as TBL
+import qualified Data.List              as List
+import           Data.Text              (Text)
+import qualified Data.Text.Lazy.Builder as TBL
 
 import           Parser
 import           StreamParser
@@ -104,12 +105,19 @@ runParseTree
   -> [Token p]
   -> Except TBL.Builder (r, [Token p])
 runParseTree tree args = do
-  case runStreamParser (satiate tree) args of
-    ParseError err -> throwError err
-    ParseEmpty _   -> throwError "empty"
-    ParseResult args' tree' -> do
+  case runStreamParser (satiate tree) [] args of
+    ParseError cs err -> throwWithContext cs err
+    ParseEmpty cs _   -> throwWithContext cs "empty"
+    ParseResult _ args' tree' -> do
       result <- resolve tree'
       return (result, args')
+  where
+    throwWithContext contexts =
+      throwError
+      . mconcat
+      . List.reverse
+      . List.intersperse ": "
+      . (: contexts)
 
 parseArguments
   :: Parser p
