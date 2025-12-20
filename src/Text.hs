@@ -8,9 +8,12 @@
 
 module Text where
 
+import           Control.Monad.Except
 import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Lazy.Builder as TLB
+
+import           StreamParser
 
 class Render a where
   render :: a -> TLB.Builder
@@ -20,6 +23,19 @@ instance Render T.Text where
 
 instance Render Char where
   render = TLB.singleton
+
+--------------------------------------------------------------------------------
+-- Text Parser
+
+-- TODO: Make this a record.
+data TextParser r = TextParser Text (Text -> Except TLB.Builder r)
+  deriving (Functor)
+
+parserHint :: TextParser r -> Text
+parserHint (TextParser hint _) = hint
+
+runTextParser :: TextParser r -> Text -> StreamParser tok r
+runTextParser (TextParser _ parse) = liftExcept . parse
 
 --------------------------------------------------------------------------------
 -- Utility Functions

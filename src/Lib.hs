@@ -54,18 +54,6 @@ cmdHead :: CommandInfo -> Text
 cmdHead = NonEmpty.head . cmdNames
 
 --------------------------------------------------------------------------------
--- Basic Parser
-
-data TextParser r = TextParser Text (Text -> Except TBL.Builder r)
-  deriving (Functor)
-
-parserHint :: TextParser r -> Text
-parserHint (TextParser hint _) = hint
-
-runTextParser :: TextParser r -> Text -> StreamParser tok r
-runTextParser (TextParser _ parse) = liftExcept . parse
-
---------------------------------------------------------------------------------
 -- Subargument Parsing
 
 -- | Parsers for subarguments of an option, i.e. '--option key=value'.
