@@ -27,15 +27,13 @@ instance Render Char where
 --------------------------------------------------------------------------------
 -- Text Parser
 
--- TODO: Make this a record.
-data TextParser r = TextParser Text (Text -> Except TLB.Builder r)
-  deriving (Functor)
-
-parserHint :: TextParser r -> Text
-parserHint (TextParser hint _) = hint
+data TextParser r = TextParser
+  { parserHint :: Text
+  , parserRun :: Text -> Except TLB.Builder r
+  } deriving (Functor)
 
 runTextParser :: TextParser r -> Text -> StreamParser tok r
-runTextParser (TextParser _ parse) = liftExcept . parse
+runTextParser tp = liftExcept . parserRun tp
 
 --------------------------------------------------------------------------------
 -- Utility Functions
