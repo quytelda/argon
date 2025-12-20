@@ -10,7 +10,7 @@ module StreamParser where
 import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Text.Lazy.Builder (Builder)
-import qualified Data.Text.Lazy.Builder as TBL
+import qualified Data.Text.Lazy.Builder as TLB
 
 type Context = Builder
 

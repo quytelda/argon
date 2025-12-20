@@ -12,7 +12,7 @@ import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
 import           Data.Text              (Text)
-import qualified Data.Text.Lazy.Builder as TBL
+import qualified Data.Text.Lazy.Builder as TLB
 
 import           StreamParser
 
@@ -32,7 +32,7 @@ valencyIs condition = all condition . valency
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
 class Resolve f where
-  resolve :: (Alternative m, MonadError TBL.Builder m) => f r -> m r
+  resolve :: (Alternative m, MonadError TLB.Builder m) => f r -> m r
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.

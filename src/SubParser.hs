@@ -10,7 +10,7 @@ module SubParser where
 import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Text              (Text)
-import qualified Data.Text.Lazy.Builder as TBL
+import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
 import           ParseTree
@@ -28,9 +28,9 @@ instance HasValency SubParser where
 
 instance Resolve SubParser where
   resolve (SubParameter (TextParser hint _)) =
-    throwError $ "expected " <> TBL.fromText hint
+    throwError $ "expected " <> TLB.fromText hint
   resolve (SubAssoc key (TextParser hint _)) =
-    throwError $ "expected " <> TBL.fromText key <> "=" <> TBL.fromText hint
+    throwError $ "expected " <> TLB.fromText key <> "=" <> TLB.fromText hint
 
 instance Render (SubParser r) where
   render (SubParameter tp) = render $ parserHint tp

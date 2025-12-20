@@ -15,7 +15,7 @@ import           Data.List.NonEmpty     (NonEmpty)
 import qualified Data.List.NonEmpty     as NonEmpty
 import           Data.Text              (Text)
 import qualified Data.Text              as T
-import qualified Data.Text.Lazy.Builder as TBL
+import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
 import           ParseTree
@@ -79,7 +79,7 @@ instance HasValency CliParser where
 
 instance Resolve CliParser where
   resolve (CliParameter (TextParser hint _)) =
-    throwError $ "expected " <> TBL.fromText hint
+    throwError $ "expected " <> TLB.fromText hint
   resolve (CliOption info _) =
     throwError $ "expected " <> render (optHead info)
   resolve (CliCommand info _) =
