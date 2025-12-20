@@ -62,6 +62,20 @@ instance MonadError Builder (StreamParser tok) where
 
 --------------------------------------------------------------------------------
 
+pushContext :: Context -> StreamParser tok ()
+pushContext context = StreamParser $ \cs ts -> ParseResult (context : cs) ts ()
+
+popContext :: StreamParser tok (Maybe Context)
+popContext = StreamParser $ \cs ts ->
+  case cs of
+    (c : cs') -> ParseResult cs' ts $ Just c
+    _         -> ParseResult cs ts Nothing
+
+withContext :: Context -> StreamParser tok a -> StreamParser tok a
+withContext context action = pushContext context *> action <* popContext
+
+--------------------------------------------------------------------------------
+
 popMaybe :: StreamParser tok (Maybe tok)
 popMaybe = StreamParser $ \cs ts ->
   case ts of
