@@ -8,7 +8,6 @@
 module Text where
 
 import qualified Data.Text                 as T
-import qualified Data.Text.Lazy            as TL
 import qualified Data.Text.Lazy.Builder    as TLB
 
 class Render a where

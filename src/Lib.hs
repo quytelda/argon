@@ -10,12 +10,11 @@ module Lib where
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
-import           Control.Monad.State
 import           Data.Functor
-import           Data.List.NonEmpty   (NonEmpty)
-import qualified Data.List.NonEmpty   as NonEmpty
-import           Data.Text            (Text)
-import qualified Data.Text            as T
+import           Data.List.NonEmpty     (NonEmpty)
+import qualified Data.List.NonEmpty     as NonEmpty
+import           Data.Text              (Text)
+import qualified Data.Text              as T
 import qualified Data.Text.Lazy.Builder as TBL
 
 import           Parser

@@ -9,11 +9,8 @@ module ParseTree where
 
 import           Control.Applicative
 import           Control.Monad.Except
-import           Control.Monad.State
-import           Control.Monad.Trans.Maybe
 import           Data.Kind
 import           Data.Text                 (Text)
-import qualified Data.Text                 as T
 import qualified Data.Text.Lazy.Builder    as TBL
 
 import           Parser

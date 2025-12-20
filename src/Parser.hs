@@ -8,15 +8,9 @@
 
 module Parser where
 
-import           Control.Applicative
-import           Control.Monad
 import           Control.Monad.Except
-import           Control.Monad.State
-import           Control.Monad.Trans.Maybe
-import           Data.Functor
 import           Data.Kind
 import           Data.Text                 (Text)
-import qualified Data.Text                 as T
 import qualified Data.Text.Lazy.Builder as TBL
 
 import           StreamParser
@@ -32,7 +26,7 @@ class HasValency p where
 
 -- | Utility function to check how many arguments something supports.
 valencyIs :: HasValency p => (Integer -> Bool) -> p r -> Bool
-valencyIs pred = all pred . valency
+valencyIs condition = all condition . valency
 
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
