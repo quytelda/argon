@@ -68,15 +68,6 @@ runTextParser (TextParser _ parse) = liftExcept . parse
 --------------------------------------------------------------------------------
 -- Subargument Parsing
 
--- | Parse a 'Text' of the form "key=value" into ("key", "value"). If
--- the delimiter ('=') does not appear in the string, the result is
--- 'Nothing'.
-keyEqualsValue :: Text -> Maybe (Text, Text)
-keyEqualsValue s =
-  case T.break (== '=') s of
-    (key, T.uncons -> Just (_, value)) -> Just (key, value)
-    _                                  -> Nothing
-
 -- | Parsers for subarguments of an option, i.e. '--option key=value'.
 data SubParser r
   = SubParameter (TextParser r)
