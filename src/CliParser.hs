@@ -125,44 +125,48 @@ instance Parser CliParser where
       Argument s -> pure s
       Escaped s  -> pure s
       _          -> empty
-    pop *> runTextParser tp text
+
+    withContext (render (parserHint tp) <> " parameter") $
+      pop *> runTextParser tp text
   feedParser parser@(CliOption _ subtree) = do
     next <- peek
     guard $ parser `accepts` next
     void $ popMaybe
 
-    -- Collect arguments for the subparser's stream from the next
-    -- argument in the parent stream.
-    let asList s = if valencyIs (> 1) subtree
-                   then T.split (== ',') s
-                   else [s]
+    withContext (render next <> " option") $ do
+      -- Collect arguments for the subparser's stream from the next
+      -- argument in the parent stream.
+      let asList s = if valencyIs (> 1) subtree
+                     then T.split (== ',') s
+                     else [s]
 
-    args <- peekMaybe <&> \case
-      Just (Bound s)    -> asList s
-      Just (Argument s) -> asList s
-      _                 -> []
+      args <- peekMaybe <&> \case
+        Just (Bound s)    -> asList s
+        Just (Argument s) -> asList s
+        _                 -> []
 
-    -- Evaluate the subparser in a new stream context.
-    (result, leftovers) <- liftEither $ parseArguments subtree args
+      -- Evaluate the subparser in a new stream context.
+      (result, leftovers) <- liftEither $ parseArguments subtree args
 
-    -- If the subparser consumed its input, we can safely remove it
-    -- the from the parent stream. However, we cannot remove partially
-    -- consumed input, so in that case we throw an error.
-    when (length args /= length leftovers) $
-      pop *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> render arg) leftovers
+      -- If the subparser consumed its input, we can safely remove it
+      -- the from the parent stream. However, we cannot remove partially
+      -- consumed input, so in that case we throw an error.
+      when (length args /= length leftovers) $
+        pop *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> render arg) leftovers
 
-    -- Ensure we are not leaving an unconsumed bound argument at the
-    -- head of the stream.
-    peekMaybe >>= \case
-      Just (Bound s) -> throwError $ "unrecognized subargument: " <> render s
-      _ -> pure ()
+      -- Ensure we are not leaving an unconsumed bound argument at the
+      -- head of the stream.
+      peekMaybe >>= \case
+        Just (Bound s) -> throwError $ "unrecognized subargument: " <> render s
+        _ -> pure ()
 
-    pure result
+      pure result
   feedParser parser@(CliCommand _ subtree) = do
     next <- peek
     guard $ parser `accepts` next
 
-    pop
+    withContext (render next <> " command") $
+      pop
       *> satiate subtree
       >>= liftExcept . resolve
 

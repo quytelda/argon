@@ -65,11 +65,16 @@ instance Parser SubParser where
 
   feedParser (SubParameter tp) = do
     peek >>= \case
-      SubArgument s -> pop *> runTextParser tp s
+      SubArgument s ->
+        withContext (render (parserHint tp) <> " subparameter") $
+        pop *> runTextParser tp s
       _             -> empty
   feedParser (SubAssoc key tp) = do
     peek >>= \case
-      SubKeyValue k v | key == k -> pop *> runTextParser tp v
+      SubKeyValue k v
+        | key == k ->
+            withContext ("\"" <> render key <> "\" suboption") $
+            pop *> runTextParser tp v
       _                          -> empty
 
 instance Render (Token SubParser) where
