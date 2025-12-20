@@ -29,7 +29,7 @@ instance Render Char where
 
 data TextParser r = TextParser
   { parserHint :: Text
-  , parserRun :: Text -> Except TLB.Builder r
+  , parserRun  :: Text -> Except TLB.Builder r
   } deriving (Functor)
 
 runTextParser :: TextParser r -> Text -> StreamParser tok r

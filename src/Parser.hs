@@ -11,6 +11,7 @@ module Parser where
 import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
+import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
@@ -39,6 +40,10 @@ class Resolve f where
 class Resolve p => Parser (p :: Type -> Type) where
   data Token p
   parseTokens :: [Text] -> [Token p]
+
+  sepProd :: Proxy p -> TLB.Builder
+  sepSum :: Proxy p -> TLB.Builder
+  renderParser :: p r -> TLB.Builder
 
   accepts :: p r -> Token p -> Bool
   feedParser :: p r -> StreamParser (Token p) r

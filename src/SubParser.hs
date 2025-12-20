@@ -13,7 +13,6 @@ import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
-import           ParseTree
 import           StreamParser
 import           Text
 
@@ -33,20 +32,7 @@ instance Resolve SubParser where
     throwError $ "expected " <> TLB.fromText key <> "=" <> TLB.fromText hint
 
 instance Render (SubParser r) where
-  render (SubParameter tp) = render $ parserHint tp
-  render (SubAssoc key tp) = render key <> "=" <> render (parserHint tp)
-
-instance Render (ParseTree SubParser r) where
-  -- special cases
-  render (SumNode p (ValueNode _)) = "[" <> render p <> "]"
-
-  render EmptyNode                 = "EMPTY"
-  render (ValueNode _)             = "VALUE"
-  render (ParseNode parser)        = render parser
-  render (MapNode _ p)             = render p
-  render (ProdNode _ l r)          = render l <> "," <> render r
-  render (SumNode l r)             = render l <> " | " <> render r
-  render (ManyNode p)              = "[" <> render p <> "...]"
+  render = renderParser
 
 instance Parser SubParser where
   data Token SubParser
@@ -58,6 +44,12 @@ instance Parser SubParser where
     where
       parse (keyEqualsValue -> Just (k, v)) = SubKeyValue k v
       parse s                               = SubArgument s
+
+  sepProd _ = ","
+  sepSum _ = " | "
+
+  renderParser (SubParameter tp) = render $ parserHint tp
+  renderParser (SubAssoc key tp) = render key <> "=" <> render (parserHint tp)
 
   accepts (SubParameter _) (SubArgument _)   = True
   accepts (SubAssoc key _) (SubKeyValue k _) = key == k

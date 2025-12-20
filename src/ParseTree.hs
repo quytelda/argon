@@ -1,10 +1,12 @@
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE DeriveFunctor       #-}
+{-# LANGUAGE FlexibleContexts    #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE GADTs               #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeFamilies        #-}
 
 module ParseTree where
 
@@ -12,11 +14,13 @@ import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
 import qualified Data.List              as List
+import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
 import           StreamParser
+import           Text
 
 -- | 'ParseTree p r' is an expression tree built from parsers of type
 -- 'p' which evaluates to a value of type 'r' supplied with the proper
@@ -72,6 +76,18 @@ instance Resolve p => Resolve (ParseTree p) where
   -- TODO: What if the ManyNode contains a resolvable node (e.g.
   -- `ManyNode (ValueNode 5)`)? Handling it this way avoids infinite
   -- loops, but might not be the expected behavior.
+
+instance Parser p => Render (ParseTree p r) where
+  -- special cases
+  render (SumNode p (ValueNode _)) = "[" <> render p <> "]"
+
+  render EmptyNode                 = "EMPTY"
+  render (ValueNode _)             = "VALUE"
+  render (ParseNode parser)        = renderParser parser
+  render (MapNode _ p)             = render p
+  render (ProdNode _ l r)          = render l <> sepProd (Proxy @p) <> render r
+  render (SumNode l r)             = render l <> sepSum (Proxy @p) <> render r
+  render (ManyNode p)              = "[" <> render p <> "...]"
 
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with

@@ -20,8 +20,8 @@ import qualified Data.Text.Lazy.Builder as TLB
 import           Parser
 import           ParseTree
 import           StreamParser
-import           Text
 import           SubParser
+import           Text
 
 --------------------------------------------------------------------------------
 -- User Interface Descriptions
@@ -62,13 +62,7 @@ data CliParser r
   deriving (Functor)
 
 instance Render (CliParser r) where
-  render (CliParameter tp) = render $ parserHint tp
-  render (CliOption info subtree) = render (optHead info)
-                                     <> if valencyIs (> 0) subtree
-                                        then "=" <> render subtree
-                                        else mempty
-  render (CliCommand info subtree) = "{" <> render (cmdHead info) <> " "
-                                      <> render subtree <> "}"
+  render = renderParser
 
 instance HasValency CliParser where
   valency (CliParameter _) = Just 1
@@ -112,6 +106,16 @@ instance Parser CliParser where
           Nothing     -> [LongOption s]
       argToTokens (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = [ShortOption c]
       argToTokens s                                                = [Argument s]
+
+  sepProd _ = " "
+  sepSum _ = " | "
+  renderParser (CliParameter tp) = render $ parserHint tp
+  renderParser (CliOption info subtree) = render (optHead info)
+                                          <> if valencyIs (> 0) subtree
+                                             then "=" <> render subtree
+                                             else mempty
+  renderParser (CliCommand info subtree) = "{" <> render (cmdHead info) <> " "
+                                           <> render subtree <> "}"
 
   accepts (CliParameter _) (Argument _)      = True
   accepts (CliParameter _) (Escaped _)       = True
@@ -169,15 +173,3 @@ instance Parser CliParser where
       pop
       *> satiate subtree
       >>= resolve
-
-instance Render (ParseTree CliParser r) where
-  -- special cases
-  render (SumNode p (ValueNode _)) = "[" <> render p <> "]"
-
-  render EmptyNode                 = "EMPTY"
-  render (ValueNode _)             = "VALUE"
-  render (ParseNode parser)        = render parser
-  render (MapNode _ p)             = render p
-  render (ProdNode _ l r)          = render l <> " " <> render r
-  render (SumNode l r)             = render l <> " | " <> render r
-  render (ManyNode p)              = "[" <> render p <> "...]"
