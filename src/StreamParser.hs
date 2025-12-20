@@ -62,6 +62,9 @@ instance MonadError Builder (StreamParser tok) where
 
 --------------------------------------------------------------------------------
 
+getContexts :: StreamParser tok [Context]
+getContexts = StreamParser $ \cs ts -> ParseResult cs ts cs
+
 pushContext :: Context -> StreamParser tok ()
 pushContext context = StreamParser $ \cs ts -> ParseResult (context : cs) ts ()
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
@@ -12,7 +13,7 @@ import           Control.Monad.Except
 import           Data.Kind
 import qualified Data.List              as List
 import           Data.Text              (Text)
-import qualified Data.Text.Lazy.Builder as TBL
+import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
 import           StreamParser
@@ -100,17 +101,15 @@ satiate tree = do
     Nothing    -> pure tree
 
 runParseTree
-  :: Parser p
+  :: (Alternative m, MonadError TLB.Builder m, Parser p)
   => ParseTree p r
-  -> [Token p]
-  -> Except TBL.Builder (r, [Token p])
-runParseTree tree args = do
-  case runStreamParser (satiate tree) [] args of
-    ParseError cs err -> throwWithContext cs err
-    ParseEmpty cs _   -> throwWithContext cs "empty"
-    ParseResult _ args' tree' -> do
-      result <- resolve tree'
-      return (result, args')
+  -> [Text]
+  -> m (r, [Token p])
+runParseTree tree args =
+  case runStreamParser (satiate tree) [] (parseTokens args) of
+    ParseResult _ args' tree' -> (,) <$> resolve tree' <*> pure args'
+    ParseEmpty _ _            -> throwError "empty subparser"
+    ParseError contexts' err  -> throwWithContext contexts' err
   where
     throwWithContext contexts =
       throwError
@@ -123,7 +122,7 @@ parseArguments
   :: Parser p
   => ParseTree p r
   -> [Text]
-  -> Either TBL.Builder (r, [Token p])
+  -> Either TLB.Builder (r, [Token p])
 parseArguments tree args = runExcept $ do
-  (result, tokens) <- runParseTree tree $ parseTokens args
+  (result, tokens) <- runParseTree tree args
   pure (result, tokens)

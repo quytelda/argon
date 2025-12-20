@@ -1,16 +1,17 @@
 {-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
-{-# LANGUAGE ViewPatterns      #-}
 
 module Parser where
 
+import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
-import           Data.Text                 (Text)
+import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TBL
 
 import           StreamParser
@@ -31,7 +32,7 @@ valencyIs condition = all condition . valency
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
 class Resolve f where
-  resolve :: f r -> Except TBL.Builder r
+  resolve :: (Alternative m, MonadError TBL.Builder m) => f r -> m r
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.
