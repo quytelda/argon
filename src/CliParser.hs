@@ -54,12 +54,6 @@ data CommandInfo = CommandInfo
 cmdHead :: CommandInfo -> Text
 cmdHead = NonEmpty.head . cmdNames
 
---------------------------------------------------------------------------------
--- Subargument Parsing
-
---------------------------------------------------------------------------------
--- Top-level CLI Parsing
-
 -- | Parsers for top-level CLI arguments such as commands and options.
 data CliParser r
   = CliParameter (TextParser r)
