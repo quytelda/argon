@@ -48,6 +48,7 @@ instance Alternative (ParseTree p) where
   empty = EmptyNode
   (<|>) = SumNode
   many = ManyNode
+  some p = ProdNode (:) p (ManyNode p)
 
 instance HasValency p => HasValency (ParseTree p) where
   valency EmptyNode        = Just 0
