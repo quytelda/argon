@@ -25,10 +25,11 @@ source-repository head
 
 library
   exposed-modules:
-      Lib
+      CliParser
       Parser
       ParseTree
       StreamParser
+      SubParser
       Text
   other-modules:
       Paths_argon
