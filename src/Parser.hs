@@ -8,8 +8,6 @@
 
 module Parser where
 
-import           Control.Applicative
-import           Control.Monad.Except
 import           Data.Kind
 import           Data.Proxy
 import           Data.Text              (Text)

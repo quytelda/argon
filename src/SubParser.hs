@@ -15,6 +15,7 @@ import qualified Data.Text.Lazy.Builder as TLB
 import           Parser
 import           StreamParser
 import           Text
+import           TextParser
 
 -- | Parsers for subarguments of an option, i.e. '--option key=value'.
 data SubParser r

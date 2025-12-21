@@ -24,6 +24,7 @@ import           ParseTree
 import           StreamParser
 import           SubParser
 import           Text
+import           TextParser
 
 --------------------------------------------------------------------------------
 -- User Interface Descriptions

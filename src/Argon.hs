@@ -3,7 +3,7 @@ module Argon where
 import           CliParser
 import           ParseTree
 import           SubParser
-import           Text
+import           TextParser
 
 import           Control.Applicative
 import           Data.List.NonEmpty  (NonEmpty)
