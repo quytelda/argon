@@ -33,7 +33,7 @@ valencyIs condition = all condition . valency
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
 class Resolve f where
-  resolve :: (Alternative m, MonadError TLB.Builder m) => f r -> m r
+  resolve :: f r -> Either TLB.Builder r
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.

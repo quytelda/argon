@@ -71,7 +71,7 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve (ParseNode parser) = resolve parser
   resolve (MapNode f p)      = fmap f $ resolve p
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
-  resolve (SumNode l r)      = resolve l <|> resolve r
+  resolve (SumNode l r)      = resolve l <> resolve r
   resolve (ManyNode _)       = pure []
   -- TODO: What if the ManyNode contains a resolvable node (e.g.
   -- `ManyNode (ValueNode 5)`)? Handling it this way avoids infinite
@@ -124,7 +124,7 @@ runParseTree
   -> m (r, [Token p])
 runParseTree tree args =
   case runStreamParser (satiate tree) [] (parseTokens args) of
-    ParseResult _ args' tree' -> (,) <$> resolve tree' <*> pure args'
+    ParseResult _ args' tree' -> (,) <$> liftEither (resolve tree') <*> pure args'
     ParseEmpty _ _            -> throwError "empty subparser"
     ParseError contexts' err  -> throwWithContext contexts' err
   where

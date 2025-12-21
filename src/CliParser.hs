@@ -172,4 +172,4 @@ instance Parser CliParser where
     withContext (render next <> " command") $
       pop
       *> satiate subtree
-      >>= resolve
+      >>= liftEither . resolve
