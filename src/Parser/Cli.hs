@@ -119,8 +119,9 @@ instance Parser CliParser where
         case keyEqualsValue s of
           Just (k, v) -> [LongOption k, Bound v]
           Nothing     -> [LongOption s]
-      argToTokens (T.stripPrefix "-" >=> T.uncons -> Just (c, "")) = [ShortOption c]
-      argToTokens s                                                = [Argument s]
+      argToTokens (T.stripPrefix "-" -> Just s)
+        | not (T.null s) = ShortOption <$> T.unpack s
+      argToTokens s = [Argument s]
 
   sepProd _ = " "
   sepSum _ = " | "
