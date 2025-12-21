@@ -6,7 +6,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module Parser where
+module Parser
+  ( HasValency(..)
+  , valencyIs
+  , Resolve(..)
+  , Parser(..)
+  ) where
 
 import           Data.Kind
 import           Data.Proxy
