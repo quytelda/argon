@@ -13,7 +13,7 @@ import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
-import           StreamParser
+import           Stream
 
 -- | Valency represents the maxiumum number of arguments a parser
 -- might consume.

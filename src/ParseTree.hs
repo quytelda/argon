@@ -19,7 +19,7 @@ import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
-import           StreamParser
+import           Stream
 import           Text
 
 -- | 'ParseTree p r' is an expression tree built from parsers of type

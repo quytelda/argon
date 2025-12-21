@@ -13,7 +13,7 @@ import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
-import           StreamParser
+import           Stream
 import           Text
 import           Parser.Text
 

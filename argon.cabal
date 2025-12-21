@@ -31,7 +31,7 @@ library
       Parser.Sub
       Parser.Text
       ParseTree
-      StreamParser
+      Stream
       Text
   other-modules:
       Paths_argon

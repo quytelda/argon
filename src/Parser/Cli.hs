@@ -21,7 +21,7 @@ import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
 import           ParseTree
-import           StreamParser
+import           Stream
 import           Parser.Sub
 import           Text
 import           Parser.Text

@@ -5,7 +5,7 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 
-module StreamParser where
+module Stream where
 
 import           Control.Applicative
 import           Control.Monad.Except

@@ -15,7 +15,7 @@ import qualified Data.Text              as T
 import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Text.Read         as TR
 
-import           StreamParser
+import           Stream
 import           Text
 
 data TextParser r = TextParser
