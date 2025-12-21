@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
 
-module CliParser where
+module Parser.Cli where
 
 import           Control.Applicative
 import           Control.Monad
@@ -22,9 +22,9 @@ import qualified Data.Text.Lazy.Builder as TLB
 import           Parser
 import           ParseTree
 import           StreamParser
-import           SubParser
+import           Parser.Sub
 import           Text
-import           TextParser
+import           Parser.Text
 
 --------------------------------------------------------------------------------
 -- User Interface Descriptions

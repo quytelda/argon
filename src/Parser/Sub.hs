@@ -5,7 +5,7 @@
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
 
-module SubParser where
+module Parser.Sub where
 
 import           Control.Applicative
 import           Control.Monad.Except
@@ -15,7 +15,7 @@ import qualified Data.Text.Lazy.Builder as TLB
 import           Parser
 import           StreamParser
 import           Text
-import           TextParser
+import           Parser.Text
 
 -- | Parsers for subarguments of an option, i.e. '--option key=value'.
 data SubParser r

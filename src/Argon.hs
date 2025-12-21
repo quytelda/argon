@@ -1,9 +1,9 @@
 module Argon where
 
-import           CliParser
+import           Parser.Cli
 import           ParseTree
-import           SubParser
-import           TextParser
+import           Parser.Sub
+import           Parser.Text
 
 import           Control.Applicative
 import           Data.List.NonEmpty  (NonEmpty)

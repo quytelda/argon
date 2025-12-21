@@ -26,13 +26,13 @@ source-repository head
 library
   exposed-modules:
       Argon
-      CliParser
       Parser
+      Parser.Cli
+      Parser.Sub
+      Parser.Text
       ParseTree
       StreamParser
-      SubParser
       Text
-      TextParser
   other-modules:
       Paths_argon
   autogen-modules:
