@@ -5,7 +5,28 @@
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
 
-module Stream where
+module Stream
+  ( -- * Types
+    Context
+  , ParseResult(..)
+  , StreamParser(..)
+
+    -- * Context
+  , pushContext
+  , popContext
+  , getContexts
+  , withContext
+
+    -- * Stream
+  , popMaybe
+  , peekMaybe
+  , pop
+  , peek
+  , push
+
+    -- * Misc.
+  , liftExcept
+  ) where
 
 import           Control.Applicative
 import           Control.Monad.Except
