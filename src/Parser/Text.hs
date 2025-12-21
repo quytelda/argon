@@ -7,7 +7,11 @@
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
 
-module Parser.Text where
+module Parser.Text
+  ( TextParser(..)
+  , runTextParser
+  , DefaultParser(..)
+  ) where
 
 import           Control.Monad.Except
 import           Data.Text              (Text)
