@@ -84,9 +84,9 @@ instance Resolve CliParser where
   resolve (CliParameter (TextParser hint _)) =
     throwError $ "expected " <> TLB.fromText hint
   resolve (CliOption info _) =
-    throwError $ "expected " <> render (optHead info)
+    throwError $ "expected option " <> render (optHead info)
   resolve (CliCommand info _) =
-    throwError $ "expected " <> render (cmdHead info)
+    throwError $ "expected command " <> render (cmdHead info)
 
 instance Render (Token CliParser) where
   render (LongOption s)  = "--" <> render s
