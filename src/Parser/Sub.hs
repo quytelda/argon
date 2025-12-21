@@ -5,7 +5,9 @@
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
 
-module Parser.Sub where
+module Parser.Sub
+  ( SubParser(..)
+  ) where
 
 import           Control.Applicative
 import           Control.Monad.Except
