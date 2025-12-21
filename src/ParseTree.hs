@@ -8,7 +8,12 @@
 {-# LANGUAGE TypeApplications    #-}
 {-# LANGUAGE TypeFamilies        #-}
 
-module ParseTree where
+module ParseTree
+  ( ParseTree(..)
+  , satiate
+  , runParseTree
+  , parseArguments
+  ) where
 
 import           Control.Applicative
 import           Control.Monad.Except
