@@ -5,7 +5,12 @@
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
 
-module Parser.Cli where
+module Parser.Cli
+  ( Flag(..)
+  , OptionInfo(..)
+  , CommandInfo(..)
+  , CliParser(..)
+  ) where
 
 import           Control.Applicative
 import           Control.Monad
