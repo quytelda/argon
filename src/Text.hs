@@ -7,7 +7,13 @@
 {-# LANGUAGE TypeFamilies      #-}
 {-# LANGUAGE ViewPatterns      #-}
 
-module Text where
+module Text
+  ( -- * Text Rendering
+    Render(..)
+
+    -- * Helpers
+  , keyEqualsValue
+  ) where
 
 import           Data.Text              (Text)
 import qualified Data.Text              as T
