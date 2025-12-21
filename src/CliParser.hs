@@ -10,9 +10,11 @@ module CliParser where
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
+import           Data.Char
 import           Data.Functor
 import           Data.List.NonEmpty     (NonEmpty)
 import qualified Data.List.NonEmpty     as NonEmpty
+import           Data.String
 import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Lazy.Builder as TLB
@@ -30,6 +32,13 @@ data Flag
   = LongFlag Text
   | ShortFlag Char
   deriving (Eq, Show)
+
+instance IsString Flag where
+  fromString ('-':'-':name)
+    | not (null name) && all isAlphaNum name = LongFlag $ T.pack name
+  fromString ('-':c:[])
+    | isAlphaNum c = ShortFlag c
+  fromString s = error $ "not a valid flag: " <> s
 
 instance Render Flag where
   render (LongFlag s)  = "--" <> render s
