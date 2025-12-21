@@ -20,11 +20,11 @@ import           Text
 
 data TextParser r = TextParser
   { parserHint :: Text
-  , parserRun  :: Text -> Except TLB.Builder r
+  , parserRun  :: Text -> Either TLB.Builder r
   } deriving (Functor)
 
 runTextParser :: TextParser r -> Text -> StreamParser tok r
-runTextParser tp = liftExcept . parserRun tp
+runTextParser tp = liftEither . parserRun tp
 
 class DefaultParser r where
   defaultParser :: TextParser r

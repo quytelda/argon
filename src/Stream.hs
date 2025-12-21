@@ -23,9 +23,6 @@ module Stream
   , pop
   , peek
   , push
-
-    -- * Misc.
-  , liftExcept
   ) where
 
 import           Control.Applicative
@@ -125,11 +122,3 @@ peek = StreamParser $ \cs ts ->
 
 push :: tok -> StreamParser tok ()
 push t = StreamParser $ \cs ts -> ParseResult cs (t:ts) ()
-
---------------------------------------------------------------------------------
-
-liftExcept :: Except Builder a -> StreamParser tok a
-liftExcept m = StreamParser $ \cs ts ->
-  case runExcept m of
-    Left err -> ParseError cs err
-    Right a  -> ParseResult cs ts a
