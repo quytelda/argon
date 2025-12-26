@@ -13,20 +13,31 @@ module Text
 
     -- * Helpers
   , keyEqualsValue
+
+    -- * Re-exports
+  , Builder
   ) where
 
 import           Data.Text              (Text)
 import qualified Data.Text              as T
+import           Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as TLB
 
+-- | A class for things that can be rendered to a text 'Builder'.
 class Render a where
-  render :: a -> TLB.Builder
+  render :: a -> Builder
+
+instance Render Builder where
+  render = id
 
 instance Render T.Text where
   render = TLB.fromText
 
 instance Render Char where
   render = TLB.singleton
+
+instance Render String where
+  render = TLB.fromString
 
 --------------------------------------------------------------------------------
 -- Utility Functions
