@@ -15,9 +15,9 @@ import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
+import           Parser.Text
 import           Stream
 import           Text
-import           Parser.Text
 
 -- | Parsers for subarguments of an option, i.e. '--option key=value'.
 data SubParser r
@@ -39,27 +39,27 @@ instance Render (SubParser r) where
 
 instance Parser SubParser where
   data Token SubParser
-    = SubKeyValue Text Text -- ^ A key=value argument
+    = SubAssoc Text Text -- ^ A key=value argument
     | SubArgument Text -- ^ A standard argument
     deriving (Eq, Show)
 
-  renderToken (SubKeyValue k v) = render k <> "=" <> render v
-  renderToken (SubArgument s)   = render s
+  renderToken (SubAssoc k v)  = render k <> "=" <> render v
+  renderToken (SubArgument s) = render s
 
   parseTokens = fmap parse
     where
-      parse (keyEqualsValue -> Just (k, v)) = SubKeyValue k v
+      parse (keyEqualsValue -> Just (k, v)) = SubAssoc k v
       parse s                               = SubArgument s
 
   sepProd _ = ","
   sepSum _ = " | "
 
-  renderParser (SubParameter tp) = render $ parserHint tp
+  renderParser (SubParameter tp)  = render $ parserHint tp
   renderParser (SubOption key tp) = render key <> "=" <> render (parserHint tp)
 
-  accepts (SubParameter _) (SubArgument _)   = True
-  accepts (SubOption key _) (SubKeyValue k _) = key == k
-  accepts _ _                                = False
+  accepts (SubParameter _) (SubArgument _) = True
+  accepts (SubOption key _) (SubAssoc k _) = key == k
+  accepts _ _                              = False
 
   feedParser (SubParameter tp) = do
     peek >>= \case
@@ -69,7 +69,7 @@ instance Parser SubParser where
       _             -> empty
   feedParser (SubOption key tp) = do
     peek >>= \case
-      SubKeyValue k v
+      SubAssoc k v
         | key == k ->
             withContext ("\"" <> render key <> "\" suboption") $
             pop *> runTextParser tp v
