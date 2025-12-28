@@ -102,7 +102,7 @@ instance Parser CliParser where
     | Argument Text -- ^ A freeform argument that is not an option
     | Escaped Text -- ^ An argument escaped using '--' that can only
                    -- be consumed by 'CliParameter' parsers.
-    deriving (Show)
+    deriving (Eq, Show)
 
   renderToken (LongOption s)  = "--" <> render s
   renderToken (ShortOption c) = "-" <> render c

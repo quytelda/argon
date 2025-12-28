@@ -41,7 +41,7 @@ instance Parser SubParser where
   data Token SubParser
     = SubKeyValue Text Text -- ^ A key=value argument
     | SubArgument Text -- ^ A standard argument
-    deriving (Show)
+    deriving (Eq, Show)
 
   renderToken (SubKeyValue k v) = render k <> "=" <> render v
   renderToken (SubArgument s)   = render s
