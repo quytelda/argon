@@ -165,7 +165,7 @@ instance Parser CliParser where
         _                 -> []
 
       -- Evaluate the subparser in a new stream context.
-      (result, leftovers) <- runParseTree subtree args
+      (result, leftovers) <- liftEither $ parseArguments subtree args
 
       -- If the subparser consumed its input, we can safely remove it
       -- the from the parent stream. However, we cannot remove partially

@@ -11,17 +11,14 @@
 module ParseTree
   ( ParseTree(..)
   , satiate
-  , runParseTree
   , parseArguments
   ) where
 
 import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
-import qualified Data.List              as List
 import           Data.Proxy
 import           Data.Text              (Text)
-import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
 import           Stream
@@ -122,29 +119,19 @@ satiate tree = do
     Just tree' -> satiate tree'
     Nothing    -> pure tree
 
-runParseTree
-  :: (Alternative m, MonadError TLB.Builder m, Parser p)
-  => ParseTree p r
-  -> [Text]
-  -> m (r, [Token p])
-runParseTree tree args =
-  case runStreamParser (satiate tree) [] (parseTokens args) of
-    ParseResult _ args' tree' -> (,) <$> liftEither (resolve tree') <*> pure args'
-    ParseEmpty _ _            -> throwError "empty subparser"
-    ParseError contexts' err  -> throwWithContext contexts' err
-  where
-    throwWithContext contexts =
-      throwError
-      . mconcat
-      . List.reverse
-      . List.intersperse ": "
-      . (: contexts)
-
 parseArguments
   :: Parser p
   => ParseTree p r
   -> [Text]
-  -> Either TLB.Builder (r, [Token p])
-parseArguments tree args = runExcept $ do
-  (result, tokens) <- runParseTree tree args
-  pure (result, tokens)
+  -> Either Builder (r, [Token p])
+parseArguments tree args =
+  case runStreamParser (satiate tree) [] (parseTokens args) of
+    ParseEmpty _ _            -> Left "empty"
+    ParseError contexts' err  -> Left $ errorInContext contexts' err
+    ParseResult _ args' tree' ->
+      case resolve tree' of
+        Right value -> Right (value, args')
+        Left err ->
+          case args' of
+            (arg:_) -> Left $ "unexpected " <> render arg
+            _       -> Left err
