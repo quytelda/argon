@@ -94,13 +94,6 @@ instance Resolve CliParser where
   resolve (CliCommand info _) =
     throwError $ "expected command " <> render (cmdHead info)
 
-instance Render (Token CliParser) where
-  render (LongOption s)  = "--" <> render s
-  render (ShortOption c) = "-" <> render c
-  render (Bound s)       = "subargument \"" <> render s <> "\""
-  render (Argument s)    = render s
-  render (Escaped s)     = render s
-
 instance Parser CliParser where
   data Token CliParser
     = LongOption Text -- ^ A long form flag (e.g. --option)
@@ -110,6 +103,12 @@ instance Parser CliParser where
     | Escaped Text -- ^ An argument escaped using '--' that can only
                    -- be consumed by 'CliParameter' parsers.
     deriving (Show)
+
+  renderToken (LongOption s)  = "--" <> render s
+  renderToken (ShortOption c) = "-" <> render c
+  renderToken (Bound s)       = "subargument \"" <> render s <> "\""
+  renderToken (Argument s)    = render s
+  renderToken (Escaped s)     = render s
 
   parseTokens args =
     let (regularArgs, drop 1 -> escapedArgs) = break (== "--") args

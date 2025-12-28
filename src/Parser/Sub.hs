@@ -43,6 +43,9 @@ instance Parser SubParser where
     | SubArgument Text -- ^ A standard argument
     deriving (Show)
 
+  renderToken (SubKeyValue k v) = render k <> "=" <> render v
+  renderToken (SubArgument s)   = render s
+
   parseTokens = fmap parse
     where
       parse (keyEqualsValue -> Just (k, v)) = SubKeyValue k v
@@ -71,7 +74,3 @@ instance Parser SubParser where
             withContext ("\"" <> render key <> "\" suboption") $
             pop *> runTextParser tp v
       _                          -> empty
-
-instance Render (Token SubParser) where
-  render (SubKeyValue k v) = render k <> "=" <> render v
-  render (SubArgument s)   = render s

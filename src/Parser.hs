@@ -19,6 +19,7 @@ import           Data.Text              (Text)
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Stream
+import           Text
 
 -- | Valency represents the maxiumum number of arguments a parser
 -- might consume.
@@ -42,6 +43,7 @@ class Resolve f where
 -- consume input token and produce a result or throw an error.
 class Resolve p => Parser (p :: Type -> Type) where
   data Token p
+  renderToken :: Token p -> Builder
   parseTokens :: [Text] -> [Token p]
 
   sepProd :: Proxy p -> TLB.Builder
@@ -50,3 +52,6 @@ class Resolve p => Parser (p :: Type -> Type) where
 
   accepts :: p r -> Token p -> Bool
   feedParser :: p r -> StreamParser (Token p) r
+
+instance Parser p => Render (Token p) where
+  render = renderToken
