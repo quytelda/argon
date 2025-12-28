@@ -49,8 +49,9 @@ library
 
 test-suite argon-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
+      Spec
       Paths_argon
   autogen-modules:
       Paths_argon
