@@ -12,6 +12,7 @@ module Stream
   , StreamParser(..)
 
     -- * Context
+  , errorInContext
   , pushContext
   , popContext
   , getContexts
@@ -27,6 +28,7 @@ module Stream
 
 import           Control.Applicative
 import           Control.Monad.Except
+import qualified Data.List              as List
 import           Data.Text.Lazy.Builder (Builder)
 
 type Context = Builder
@@ -78,6 +80,14 @@ instance MonadError Builder (StreamParser tok) where
       result             -> result
 
 --------------------------------------------------------------------------------
+
+-- | Format an error message prepended with context information.
+errorInContext :: [Context] -> Builder -> Builder
+errorInContext contexts =
+  mconcat
+  . List.reverse
+  . List.intersperse ": "
+  . (: contexts)
 
 getContexts :: StreamParser tok [Context]
 getContexts = StreamParser $ \cs ts -> ParseResult cs ts cs
