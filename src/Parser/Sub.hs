@@ -22,7 +22,7 @@ import           Parser.Text
 -- | Parsers for subarguments of an option, i.e. '--option key=value'.
 data SubParser r
   = SubParameter (TextParser r)
-  | SubAssoc Text (TextParser r)
+  | SubOption Text (TextParser r)
   deriving (Functor)
 
 instance HasValency SubParser where
@@ -31,7 +31,7 @@ instance HasValency SubParser where
 instance Resolve SubParser where
   resolve (SubParameter (TextParser hint _)) =
     throwError $ "expected " <> TLB.fromText hint
-  resolve (SubAssoc key (TextParser hint _)) =
+  resolve (SubOption key (TextParser hint _)) =
     throwError $ "expected " <> TLB.fromText key <> "=" <> TLB.fromText hint
 
 instance Render (SubParser r) where
@@ -55,10 +55,10 @@ instance Parser SubParser where
   sepSum _ = " | "
 
   renderParser (SubParameter tp) = render $ parserHint tp
-  renderParser (SubAssoc key tp) = render key <> "=" <> render (parserHint tp)
+  renderParser (SubOption key tp) = render key <> "=" <> render (parserHint tp)
 
   accepts (SubParameter _) (SubArgument _)   = True
-  accepts (SubAssoc key _) (SubKeyValue k _) = key == k
+  accepts (SubOption key _) (SubKeyValue k _) = key == k
   accepts _ _                                = False
 
   feedParser (SubParameter tp) = do
@@ -67,7 +67,7 @@ instance Parser SubParser where
         withContext (render (parserHint tp) <> " subparameter") $
         pop *> runTextParser tp s
       _             -> empty
-  feedParser (SubAssoc key tp) = do
+  feedParser (SubOption key tp) = do
     peek >>= \case
       SubKeyValue k v
         | key == k ->

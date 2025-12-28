@@ -64,4 +64,4 @@ subparameter = ParseNode . SubParameter
 
 -- | Define a suboption to a CLI option.
 suboption :: Text -> TextParser a -> ParseTree SubParser a
-suboption key = ParseNode . SubAssoc key
+suboption key = ParseNode . SubOption key
