@@ -30,6 +30,9 @@ opt_mlem_unit = option [LongFlag "mlem"] "" $ pure ()
 opt_e_unit :: ParseTree CliParser ()
 opt_e_unit = option [ShortFlag 'e'] "" $ pure ()
 
+opt_e_param :: ParseTree CliParser Text
+opt_e_param = option [ShortFlag 'e'] "" defaultParameter
+
 opt_f_unit :: ParseTree CliParser ()
 opt_f_unit = option [ShortFlag 'f'] "" $ pure ()
 
@@ -90,6 +93,10 @@ optionSpec = do
           Left err              -> expectationFailure (show err)
 
   context "when an argument is required" $ do
+    it "renders with parameter hint" $ do
+      render opt_example_param `shouldBe` "--example=STRING"
+      render opt_e_param `shouldBe` "-e STRING"
+
     context "when no argument is provided" $ do
       it "fails to parse" $ do
         parseArguments opt_example_param ["--example"]
@@ -100,6 +107,9 @@ optionSpec = do
           `shouldBe` Right ("qwer", [])
 
   context "when an argument is optional" $ do
+    it "renders parameter hint in brackets" $ do
+      render opt_example_param_optional `shouldBe` "--example=[STRING]"
+
     context "when no argument is provided" $ do
       it "yields a default value" $ do
         parseArguments opt_example_param_optional ["--example"]

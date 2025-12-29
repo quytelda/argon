@@ -25,11 +25,11 @@ import qualified Data.Text              as T
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Parser
+import           Parser.Sub
+import           Parser.Text
 import           ParseTree
 import           Stream
-import           Parser.Sub
 import           Text
-import           Parser.Text
 
 --------------------------------------------------------------------------------
 -- User Interface Descriptions
@@ -125,10 +125,15 @@ instance Parser CliParser where
   sepProd _ = " "
   sepSum _ = " | "
   renderParser (CliParameter tp) = render $ parserHint tp
-  renderParser (CliOption info subtree) = render (optHead info)
-                                          <> if valencyIs (> 0) subtree
-                                             then "=" <> render subtree
-                                             else mempty
+  renderParser (CliOption info subtree) =
+    let rep = optHead info
+        separator = case rep of
+                      LongFlag _  -> "="
+                      ShortFlag _ -> " "
+    in render rep
+       <> if valencyIs (> 0) subtree
+          then separator <> render subtree
+          else mempty
   renderParser (CliCommand info subtree) = "{" <> render (cmdHead info) <> " "
                                            <> render subtree <> "}"
 
