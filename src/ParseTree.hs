@@ -1,8 +1,6 @@
-{-# LANGUAGE DeriveFunctor       #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE FlexibleInstances   #-}
 {-# LANGUAGE GADTs               #-}
-{-# LANGUAGE LambdaCase          #-}
 {-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
@@ -44,7 +42,7 @@ data ParseTree (p :: Type -> Type) (r :: Type) where
   ManyNode :: ParseTree p r -> ParseTree p [r]
 
 instance Functor (ParseTree p) where
-  fmap f = MapNode f
+  fmap = MapNode
 
 instance Applicative (ParseTree p) where
   pure = ValueNode
@@ -71,7 +69,7 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve EmptyNode          = throwError "empty"
   resolve (ValueNode value)  = pure value
   resolve (ParseNode parser) = resolve parser
-  resolve (MapNode f p)      = fmap f $ resolve p
+  resolve (MapNode f p)      = f <$> resolve p
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
   resolve (SumNode l r)      = resolve l <> resolve r
   resolve (ManyNode _)       = pure []

@@ -42,7 +42,7 @@ data Flag
 instance IsString Flag where
   fromString ('-':'-':name)
     | not (null name) && all isAlphaNum name = LongFlag $ T.pack name
-  fromString ('-':c:[])
+  fromString ['-', c]
     | isAlphaNum c = ShortFlag c
   fromString s = error $ "not a valid flag: " <> s
 
@@ -155,7 +155,7 @@ instance Parser CliParser where
   feedParser parser@(CliOption _ subtree) = do
     next <- peek
     guard $ parser `accepts` next
-    void $ popMaybe
+    void popMaybe
 
     withContext (render next <> " option") $ do
       -- Collect arguments for the subparser's stream from the next

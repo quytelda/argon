@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveFunctor         #-}
 {-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE TypeFamilies          #-}
@@ -42,10 +41,10 @@ data ParseResult tok a
 instance Semigroup (ParseResult tok a) where
   l <> r =
     case (l, r) of
-      (ParseError _ _, _)    -> l
-      (_, ParseError _ _)    -> r
-      (ParseEmpty _ _, _)    -> r
-      (ParseResult _ _ _, _) -> l
+      (ParseError {}, _)  -> l
+      (_, ParseError {})  -> r
+      (ParseEmpty {}, _)  -> r
+      (ParseResult {}, _) -> l
 
 newtype StreamParser tok a = StreamParser
   { runStreamParser :: [Context] -> [tok] -> ParseResult tok a }

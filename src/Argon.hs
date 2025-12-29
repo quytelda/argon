@@ -10,9 +10,9 @@ module Argon
   ) where
 
 import           Parser.Cli
-import           ParseTree
 import           Parser.Sub
 import           Parser.Text
+import           ParseTree
 
 import           Control.Applicative
 import           Data.List.NonEmpty  (NonEmpty)
