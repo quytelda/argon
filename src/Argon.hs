@@ -1,5 +1,6 @@
 module Argon
   ( parameter
+  , defaultParameter
   , option
   , optionPure
   , switch
@@ -17,9 +18,21 @@ import           Control.Applicative
 import           Data.List.NonEmpty  (NonEmpty)
 import           Data.Text           (Text)
 
+class HasParameter p where
+  parameter :: TextParser a -> ParseTree p a
+
+instance HasParameter SubParser where
+  parameter = subparameter
+
+instance HasParameter CliParser where
+  parameter = cliparameter
+
+defaultParameter :: (DefaultParser r, HasParameter p) => ParseTree p r
+defaultParameter = parameter defaultParser
+
 -- | Define a command line parameter (i.e. a non-option).
-parameter :: TextParser a -> ParseTree CliParser a
-parameter = ParseNode . CliParameter
+cliparameter :: TextParser a -> ParseTree CliParser a
+cliparameter = ParseNode . CliParameter
 
 -- | Define a standard CLI option triggered by one or more flags.
 option
