@@ -36,6 +36,9 @@ opt_f_unit = option [ShortFlag 'f'] "" $ pure ()
 opt_example_param :: ParseTree CliParser Text
 opt_example_param = option [LongFlag "example"] "" defaultParameter
 
+opt_example_switch :: ParseTree CliParser Bool
+opt_example_switch = switch [LongFlag "example"] ""
+
 opt_example_param_optional :: ParseTree CliParser Text
 opt_example_param_optional =
   option [LongFlag "example"] "" (defaultParameter <|> pure "asdf")
@@ -51,6 +54,16 @@ optionSpec = do
   it "parses short option groups" $ do
     parseArguments (opt_e_unit *> opt_f_unit) ["-ef"]
       `shouldBe` Right ((), [])
+
+  describe "switches" $ do
+    context "when switch is present" $ do
+      it "yields True" $ do
+        parseArguments opt_example_switch ["--example"]
+          `shouldBe` Right (True, [])
+    context "when switch is absent" $ do
+      it "yields False" $ do
+        parseArguments opt_example_switch []
+          `shouldBe` Right (False, [])
 
   context "when a bound argument is provided" $ do
     context "when an argument is expected" $ do
