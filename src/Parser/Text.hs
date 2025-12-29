@@ -96,3 +96,9 @@ instance DefaultParser Text where
     { parserHint = "STRING"
     , parserRun = pure
     }
+
+instance DefaultParser String where
+  defaultParser = TextParser
+    { parserHint = "STRING"
+    , parserRun = pure . T.unpack
+    }
