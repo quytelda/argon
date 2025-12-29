@@ -55,6 +55,12 @@ optionSpec = do
     parseArguments (opt_e_unit *> opt_f_unit) ["-ef"]
       `shouldBe` Right ((), [])
 
+  it "parses options in any order" $ do
+    parseArguments (opt_e_unit *> opt_f_unit) ["-ef"]
+      `shouldBe` Right ((), [])
+    parseArguments (opt_e_unit *> opt_f_unit) ["-fe"]
+      `shouldBe` Right ((), [])
+
   describe "switches" $ do
     context "when switch is present" $ do
       it "yields True" $ do
