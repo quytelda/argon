@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Argon
+      HelpInfo
       Parser
       Parser.Cli
       Parser.Sub
