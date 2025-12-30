@@ -50,14 +50,6 @@ optionPure
   -> ParseTree CliParser a
 optionPure flags help = ParseNode . CliOption (OptionInfo flags help) . pure
 
--- | Define a CLI option that takes one simple subparameter.
-optionUnary
-  :: NonEmpty Flag
-  -> Text
-  -> TextParser a
-  -> ParseTree CliParser a
-optionUnary flags help = option flags help . subparameter
-
 -- | Define a CLI option which produces 'True' if present and 'False'
 -- otherwise.
 switch :: NonEmpty Flag -> Text -> ParseTree CliParser Bool
