@@ -151,11 +151,11 @@ instance Parser CliParser where
       _          -> empty
 
     withContext (render (parserHint tp) <> " parameter") $
-      pop *> runTextParser tp text
+      pop_ *> runTextParser tp text
   feedParser parser@(CliOption _ subtree) = do
     next <- peek
     guard $ parser `accepts` next
-    void popMaybe
+    pop_
 
     withContext (render next <> " option") $ do
       -- Collect arguments for the subparser's stream from the next
@@ -176,7 +176,7 @@ instance Parser CliParser where
       -- the from the parent stream. However, we cannot remove partially
       -- consumed input, so in that case we throw an error.
       when (length args /= length leftovers) $
-        pop *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> render arg) leftovers
+        pop_ *> mapM_ (\arg -> throwError $ "unrecognized subargument: " <> render arg) leftovers
 
       -- Ensure we are not leaving an unconsumed bound argument at the
       -- head of the stream.
@@ -190,6 +190,6 @@ instance Parser CliParser where
     guard $ parser `accepts` next
 
     withContext (render next <> " command") $
-      pop
+      pop_
       *> satiate subtree
       >>= liftEither . resolve
