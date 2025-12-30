@@ -4,28 +4,20 @@
 module ParseTreeSpec (spec) where
 
 import           Control.Applicative
-import           Control.Monad
-import           Data.Bifunctor
 import           Data.Either
-import           Data.List.NonEmpty  (NonEmpty)
-import qualified Data.List.NonEmpty  as NonEmpty
 import           Data.Text           (Text)
-import qualified Data.Text           as T
-
 import           Test.Hspec
 
 import           Argon
 import           Parser.Cli
-import           Parser.Sub
-import           Parser.Text
 import           ParseTree
 import           Text
 
+--------------------------------------------------------------------------------
+-- Sample Options for Testing
+
 opt_example_unit :: ParseTree CliParser ()
 opt_example_unit = option [LongFlag "example"] "" $ pure ()
-
-opt_mlem_unit :: ParseTree CliParser ()
-opt_mlem_unit = option [LongFlag "mlem"] "" $ pure ()
 
 opt_e_unit :: ParseTree CliParser ()
 opt_e_unit = option [ShortFlag 'e'] "" $ pure ()
@@ -117,7 +109,7 @@ optionSpec = do
     context "when an argument is provided" $ do
       it "parses the argument" $ do
         parseArguments opt_example_param_optional ["--example", "qwer"]
-          `shouldBe` Right ("qwer", [])    
+          `shouldBe` Right ("qwer", [])
 
 spec :: Spec
 spec = do
