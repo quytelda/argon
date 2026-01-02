@@ -10,6 +10,8 @@ module Parser.Cli
   , OptionInfo(..)
   , CommandInfo(..)
   , CliParser(..)
+  , optHead
+  , cmdHead
   ) where
 
 import           Control.Applicative
@@ -37,7 +39,7 @@ import           Text
 data Flag
   = LongFlag Text
   | ShortFlag Char
-  deriving (Eq, Show)
+  deriving (Eq, Ord, Show)
 
 instance IsString Flag where
   fromString ('-':'-':name)
@@ -53,7 +55,7 @@ instance Render Flag where
 data OptionInfo = OptionInfo
   { optFlags :: NonEmpty Flag
   , optHelp  :: Text
-  } deriving (Show)
+  } deriving (Eq, Ord, Show)
 
 -- | Get a representative flag for this option (e.g. the first one).
 optHead :: OptionInfo -> Flag
@@ -62,7 +64,7 @@ optHead = NonEmpty.head . optFlags
 data CommandInfo = CommandInfo
   { cmdNames :: NonEmpty Text
   , cmdHelp  :: Text
-  } deriving (Show)
+  } deriving (Eq, Ord, Show)
 
 -- | Get a representative command name for this command (e.g. the
 -- first one).

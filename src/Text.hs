@@ -7,6 +7,8 @@
 module Text
   ( -- * Text Rendering
     Render(..)
+  , renderLazyText
+  , renderText
 
     -- * Helpers
   , keyEqualsValue
@@ -17,6 +19,7 @@ module Text
 
 import           Data.Text              (Text)
 import qualified Data.Text              as T
+import qualified Data.Text.Lazy         as TL
 import           Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as TLB
 
@@ -35,6 +38,12 @@ instance Render Char where
 
 instance Render String where
   render = TLB.fromString
+
+renderLazyText :: Render a => a -> TL.Text
+renderLazyText = TLB.toLazyText . render
+
+renderText :: Render a => a -> Text
+renderText = TL.toStrict . TLB.toLazyText . render
 
 --------------------------------------------------------------------------------
 -- Utility Functions

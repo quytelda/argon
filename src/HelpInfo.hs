@@ -7,15 +7,9 @@
 
 module HelpInfo where
 
-import           Control.Applicative
-import           Control.Monad
-import           Control.Monad.Except
-import           Data.Char
-import           Data.Functor
-import qualified Data.List              as List
-import           Data.List.NonEmpty     (NonEmpty)
 import qualified Data.List.NonEmpty     as NonEmpty
-import           Data.String
+import           Data.Map.Strict        (Map)
+import qualified Data.Map.Strict        as Map
 import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Lazy         as TL
@@ -24,13 +18,8 @@ import qualified Data.Text.Lazy.Builder as TLB
 import           Parser
 import           Parser.Cli
 import           Parser.Sub
-import           Parser.Text
 import           ParseTree
-import           Stream
 import           Text
-
-mwhen :: Monoid a => Bool -> a -> a
-mwhen condition a = if condition then a else mempty
 
 data OptionHelp = OptionHelp
   { ohShorts :: TL.Text
@@ -39,21 +28,44 @@ data OptionHelp = OptionHelp
   , ohDesc   :: TL.Text
   } deriving (Show)
 
+-- | Like `Control.Monad.when` but for 'Monoid' instead of
+-- 'Alternative'.
+mwhen :: Monoid a => Bool -> a -> a
+mwhen condition a = if condition then a else mempty
+
 mkOptionHelp :: OptionInfo -> ParseTree SubParser r -> OptionHelp
-mkOptionHelp info subtree =
+mkOptionHelp OptionInfo{..} subtree =
   OptionHelp
   { ohShorts = fmtFlagList shorts
   , ohLongs  = fmtFlagList longs
   , ohArg    = mwhen (valencyIs (> 0) subtree)
-               $ TLB.toLazyText $ render subtree
-  , ohDesc   = TL.fromStrict $ optHelp info
+               $ renderLazyText subtree
+  , ohDesc   = TL.fromStrict optHelp
   }
   where
-    (longs, shorts) = NonEmpty.partition (\case LongFlag {} -> True; _ -> False) $ optFlags info
-    fmtFlagList = TLB.toLazyText . mconcat . List.intersperse ", " . fmap render
+    isLongFlag LongFlag{} = True
+    isLongFlag _          = False
+    (longs, shorts) = NonEmpty.partition isLongFlag optFlags
+    fmtFlagList = TL.intercalate ", " . fmap renderLazyText
 
-fmtOptionHelps :: [OptionHelp] -> Builder
-fmtOptionHelps xs = foldMap (\x -> formatRow x <> "\n") xs
+collectOptions :: ParseTree CliParser r -> Map [CommandInfo] [OptionHelp]
+collectOptions tree = go tree mempty
+  where
+    go :: ParseTree CliParser r
+       -> Map [CommandInfo] [OptionHelp]
+       -> Map [CommandInfo] [OptionHelp]
+    go (ParseNode (CliOption info subtree)) =
+      Map.insertWith (<>) [] [mkOptionHelp info subtree]
+    go (ParseNode (CliCommand info subtree)) =
+      Map.union $ Map.mapKeys (info :) $ collectOptions subtree
+    go (MapNode _ p)    = go p
+    go (ProdNode _ l r) = go r . go l
+    go (SumNode l r)    = go r . go l
+    go (ManyNode p)     = go p
+    go _                = id
+
+fmtOptionTable :: [OptionHelp] -> Builder
+fmtOptionTable xs = foldMap formatRow xs
   where
     maxLengthBy f = maximum $ TL.length . f <$> xs
     col1width = maxLengthBy ohShorts
@@ -61,10 +73,38 @@ fmtOptionHelps xs = foldMap (\x -> formatRow x <> "\n") xs
     col3width = maxLengthBy ohArg
 
     formatRow OptionHelp{..} =
-      foldMap TLB.fromLazyText
-      $ List.intersperse "  "
+      TLB.fromLazyText
+      $ TL.intercalate "  "
       [ TL.justifyLeft col1width ' ' ohShorts
       , TL.justifyLeft col2width ' ' ohLongs
       , TL.justifyLeft col3width ' ' ohArg
       , ohDesc
+      , "\n"
       ]
+
+fmtHeader :: [CommandInfo] -> Builder
+fmtHeader [] = mempty
+fmtHeader cmds@(info : _) =
+  fmtCommand cmds
+  <> " command: "
+  <> render (cmdHelp info)
+  <> "\n"
+  where
+    quote m = "\"" <> m <> "\""
+    fmtCommand = quote . render . T.unwords . fmap cmdHead . reverse
+
+fmtAllSections :: Map [CommandInfo] [OptionHelp] -> Builder
+fmtAllSections =
+  Map.foldlWithKey
+  (\acc cmds ohs ->
+      acc
+      <> "\n"
+      <> fmtHeader cmds
+      <> fmtOptionTable ohs
+  ) mempty
+
+renderHelpInfo :: Text -> Text -> ParseTree CliParser r -> Builder
+renderHelpInfo name description tree =
+  "Usage: " <> render name <> " " <> render tree <> "\n\n"
+  <> render description <> "\n"
+  <> fmtAllSections (collectOptions tree)
