@@ -13,7 +13,6 @@ module Parser
 import           Data.Kind
 import           Data.Proxy
 import           Data.Text              (Text)
-import qualified Data.Text.Lazy.Builder as TLB
 
 import           Stream
 import           Text
@@ -34,20 +33,34 @@ valencyIs condition = all condition . valency
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
 class Resolve f where
-  resolve :: f r -> Either TLB.Builder r
+  resolve :: f r -> Either Builder r
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.
 class Resolve p => Parser (p :: Type -> Type) where
+  -- | The token type this parser operates upon.
   data Token p
+
+  -- | A 'Parser' instance must provide a rendering function so that
+  -- tokens can be displayed in error messages.
   renderToken :: Token p -> Builder
+
+  -- | A 'Parser' instance needs to provide a function to parse its
+  -- tokens from 'Text' inputs. We parse from '[Text]' to '[Token p]'
+  -- since it is possible that a single 'Text' might yield multiple
+  -- tokens (or none).
   parseTokens :: [Text] -> [Token p]
 
-  sepProd :: Proxy p -> TLB.Builder
-  sepSum :: Proxy p -> TLB.Builder
-  renderParser :: p r -> TLB.Builder
+  sepProd :: Proxy p -> Builder
+  sepSum :: Proxy p -> Builder
 
+  -- | Generate usage information for a 'Parser' instance.
+  renderParser :: p r -> Builder
+
+  -- | Check whether this parser accepts a particular token.
   accepts :: p r -> Token p -> Bool
+
+  -- | Lift this parser into an appropriate 'StreamParser'.
   feedParser :: p r -> StreamParser (Token p) r
 
 instance Parser p => Render (Token p) where

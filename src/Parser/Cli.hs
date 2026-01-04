@@ -126,6 +126,7 @@ instance Parser CliParser where
 
   sepProd _ = " "
   sepSum _ = " | "
+
   renderParser (CliParameter tp) = render $ parserHint tp
   renderParser (CliOption info subtree) =
     let rep = optHead info
