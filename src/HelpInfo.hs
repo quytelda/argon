@@ -5,7 +5,9 @@
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE TypeFamilies      #-}
 
-module HelpInfo where
+module HelpInfo
+  ( renderHelpInfo
+  ) where
 
 import qualified Data.List.NonEmpty     as NonEmpty
 import           Data.Map.Strict        (Map)
