@@ -10,6 +10,7 @@ module Parser.Cli
   , OptionInfo(..)
   , CommandInfo(..)
   , CliParser(..)
+  , Token(..)
   , optHead
   , cmdHead
   ) where
