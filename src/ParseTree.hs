@@ -9,6 +9,7 @@
 module ParseTree
   ( ParseTree(..)
   , satiate
+  , runParseTree
   , parseArguments
   ) where
 
@@ -117,13 +118,13 @@ satiate tree = do
     Just tree' -> satiate tree'
     Nothing    -> pure tree
 
-parseArguments
+runParseTree
   :: Parser p
   => ParseTree p r
-  -> [Text]
+  -> [Token p]
   -> Either Builder (r, [Token p])
-parseArguments tree args =
-  case runStreamParser (satiate tree) [] (parseTokens args) of
+runParseTree tree args =
+  case runStreamParser (satiate tree) [] args of
     ParseEmpty _ _            -> Left "empty"
     ParseError contexts' err  -> Left $ errorInContext contexts' err
     ParseResult _ args' tree' ->
@@ -133,3 +134,10 @@ parseArguments tree args =
           case args' of
             (arg:_) -> Left $ "unexpected " <> render arg
             _       -> Left err
+
+parseArguments
+  :: Parser p
+  => ParseTree p r
+  -> [Text]
+  -> Either Builder (r, [Token p])
+parseArguments tree = runParseTree tree . parseTokens
