@@ -7,5 +7,5 @@ import qualified General
 
 main :: IO ()
 main = hspec $ do
-  describe "General" General.spec
+  General.spec
   Spec.spec

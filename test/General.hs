@@ -21,6 +21,31 @@ import           Parser.Text
 import           ParseTree
 import           Text
 
+--------------------------------------------------------------------------------
+-- Sample Options for Testing
+
+opt_example_unit :: ParseTree CliParser ()
+opt_example_unit = option [LongFlag "example"] "" $ pure ()
+
+opt_e_unit :: ParseTree CliParser ()
+opt_e_unit = option [ShortFlag 'e'] "" $ pure ()
+
+opt_e_param :: ParseTree CliParser Text
+opt_e_param = option [ShortFlag 'e'] "" defaultParameter
+
+opt_f_unit :: ParseTree CliParser ()
+opt_f_unit = option [ShortFlag 'f'] "" $ pure ()
+
+opt_example_param :: ParseTree CliParser Text
+opt_example_param = option [LongFlag "example"] "" defaultParameter
+
+opt_example_switch :: ParseTree CliParser Bool
+opt_example_switch = switch [LongFlag "example"] ""
+
+opt_example_param_optional :: ParseTree CliParser Text
+opt_example_param_optional =
+  option [LongFlag "example"] "" (defaultParameter <|> pure "asdf")
+
 param_text :: ParseTree CliParser Text
 param_text = defaultParameter
 
@@ -30,8 +55,81 @@ option_asdf = option ["--asdf", "-a"] "" $ pure "qwer"
 command_asdf :: ParseTree CliParser Text
 command_asdf = command ["asdf"] "" $ pure "qwer"
 
-spec :: Spec
-spec = do
+optionSpec :: Spec
+optionSpec = do
+  it "parses long options" $ do
+    parseArguments opt_example_unit ["--example"]
+      `shouldBe` Right ((), [])
+  it "parses short options" $ do
+    parseArguments opt_e_unit ["-e"]
+      `shouldBe` Right ((), [])
+  it "parses short option groups" $ do
+    parseArguments (opt_e_unit *> opt_f_unit) ["-ef"]
+      `shouldBe` Right ((), [])
+
+  it "parses options in any order" $ do
+    parseArguments (opt_e_unit *> opt_f_unit) ["-ef"]
+      `shouldBe` Right ((), [])
+    parseArguments (opt_e_unit *> opt_f_unit) ["-fe"]
+      `shouldBe` Right ((), [])
+
+  describe "switches" $ do
+    context "when switch is present" $ do
+      it "yields True" $ do
+        parseArguments opt_example_switch ["--example"]
+          `shouldBe` Right (True, [])
+    context "when switch is absent" $ do
+      it "yields False" $ do
+        parseArguments opt_example_switch []
+          `shouldBe` Right (False, [])
+
+  context "when a bound argument is provided" $ do
+    context "when an argument is expected" $ do
+      it "parses the argument" $ do
+        parseArguments opt_example_param ["--example=qwer"]
+          `shouldBe` Right ("qwer", [])
+    context "when no argument is expected" $ do
+      it "parsing fails" $ do
+        parseArguments opt_example_unit ["--example=qwer"]
+          `shouldSatisfy` isLeft
+
+  context "when no argument is expected" $ do
+    context "when an argument is available" $ do
+      it "doesn't consume the argument" $ do
+        let result = parseArguments opt_example_unit ["--example", "qwer"]
+        case result of
+          Right ((), leftovers) -> render <$> leftovers `shouldBe` ["qwer"]
+          Left err              -> expectationFailure (show err)
+
+  context "when an argument is required" $ do
+    it "renders with parameter hint" $ do
+      render opt_example_param `shouldBe` "--example=STRING"
+      render opt_e_param `shouldBe` "-e STRING"
+
+    context "when no argument is provided" $ do
+      it "fails to parse" $ do
+        parseArguments opt_example_param ["--example"]
+          `shouldSatisfy` isLeft
+    context "when an argument is provided" $ do
+      it "the argument is consumed" $ do
+        parseArguments opt_example_param ["--example", "qwer"]
+          `shouldBe` Right ("qwer", [])
+
+  context "when an argument is optional" $ do
+    it "renders parameter hint in brackets" $ do
+      render opt_example_param_optional `shouldBe` "--example=[STRING]"
+
+    context "when no argument is provided" $ do
+      it "yields a default value" $ do
+        parseArguments opt_example_param_optional ["--example"]
+          `shouldBe` Right ("asdf", [])
+    context "when an argument is provided" $ do
+      it "parses the argument" $ do
+        parseArguments opt_example_param_optional ["--example", "qwer"]
+          `shouldBe` Right ("qwer", [])
+
+generalSpec :: Spec
+generalSpec = do
   context "when \"-\" is given as an argument" $ do
     it "parses the string \"-\"" $ do
       parseArguments param_text ["-"]
@@ -62,3 +160,8 @@ spec = do
     it "fails without consuming any tokens" $ do
       runParseTree param_text [Bound "asdf"]
         `shouldBe` Left "unexpected subargument \"asdf\""
+
+spec :: Spec
+spec = do
+  describe "General functionality" generalSpec
+  describe "CLI Options" optionSpec
