@@ -60,7 +60,6 @@ collectOptions tree = go tree mempty
       Map.insertWith (<>) [] [mkOptionHelp info subtree]
     go (ParseNode (CliCommand info subtree)) =
       Map.union $ Map.mapKeys (info :) $ collectOptions subtree
-    go (MapNode _ p)    = go p
     go (ProdNode _ l r) = go r . go l
     go (SumNode l r)    = go r . go l
     go (ManyNode p)     = go p

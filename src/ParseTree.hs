@@ -33,8 +33,6 @@ data ParseTree (p :: Type -> Type) (r :: Type) where
   ValueNode :: r -> ParseTree p r
   -- | A parser awaiting input
   ParseNode :: p r -> ParseTree p r
-  -- | Abstracts fmap
-  MapNode :: (a -> r) -> ParseTree p a -> ParseTree p r
   -- | Abstracts liftA2
   ProdNode :: (u -> v -> r) -> ParseTree p u -> ParseTree p v -> ParseTree p r
   -- | Abstracts (<|>)
@@ -43,7 +41,7 @@ data ParseTree (p :: Type -> Type) (r :: Type) where
   ManyNode :: ParseTree p r -> ParseTree p [r]
 
 instance Functor (ParseTree p) where
-  fmap = MapNode
+  fmap = liftA2 ($) . pure
 
 instance Applicative (ParseTree p) where
   pure = ValueNode
@@ -59,7 +57,6 @@ instance HasValency p => HasValency (ParseTree p) where
   valency EmptyNode        = Just 0
   valency (ValueNode _)    = Just 0
   valency (ParseNode p)    = valency p
-  valency (MapNode _ p)    = valency p
   valency (ProdNode _ l r) = (+) <$> valency l <*> valency r
   valency (SumNode l r)    = max <$> valency l <*> valency r
   valency (ManyNode p)     = case valency p of
@@ -70,7 +67,6 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve EmptyNode          = throwError "empty"
   resolve (ValueNode value)  = pure value
   resolve (ParseNode parser) = resolve parser
-  resolve (MapNode f p)      = f <$> resolve p
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
   resolve (SumNode l r)      = resolve l <> resolve r
   resolve (ManyNode _)       = pure []
@@ -85,7 +81,6 @@ instance Parser p => Render (ParseTree p r) where
   render EmptyNode                 = "EMPTY"
   render (ValueNode _)             = "VALUE"
   render (ParseNode parser)        = renderParser parser
-  render (MapNode _ p)             = render p
   render (ProdNode _ l r)          = render l <> sepProd (Proxy @p) <> render r
   render (SumNode l r)             = render l <> sepSum (Proxy @p) <> render r
   render (ManyNode p)              = "[" <> render p <> "...]"
@@ -97,7 +92,6 @@ feed :: Parser p => ParseTree p r -> StreamParser (Token p) (ParseTree p r)
 feed EmptyNode = empty
 feed (ValueNode _) = empty
 feed (ParseNode parser) = ValueNode <$> feedParser parser
-feed (MapNode f tree) = MapNode f <$> feed tree
 feed (ProdNode f l r) =
   (ProdNode f <$> feed l <*> pure r) <|>
   (ProdNode f l <$> feed r)
