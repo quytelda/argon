@@ -141,13 +141,6 @@ instance Parser CliParser where
   renderParser (CliCommand info subtree) = "{" <> render (cmdHead info) <> " "
                                            <> render subtree <> "}"
 
-  accepts (CliParameter _) (Argument _)      = True
-  accepts (CliParameter _) (Escaped _)       = True
-  accepts (CliOption info _) (LongOption s)  = LongFlag s `elem` optFlags info
-  accepts (CliOption info _) (ShortOption c) = ShortFlag c `elem` optFlags info
-  accepts (CliCommand info _) (Argument s)   = s `elem` cmdNames info
-  accepts _ _                                = False
-
   feedParser (CliParameter tp) = do
     text <- peek >>= \case
       Argument s -> pure s
@@ -156,9 +149,12 @@ instance Parser CliParser where
 
     withContext (render (parserHint tp) <> " parameter") $
       pop_ *> runTextParser tp text
-  feedParser parser@(CliOption _ subtree) = do
+  feedParser (CliOption info subtree) = do
     next <- peek
-    guard $ parser `accepts` next
+    case next of
+      LongOption  s -> guard $ LongFlag  s `elem` optFlags info
+      ShortOption c -> guard $ ShortFlag c `elem` optFlags info
+      _             -> empty
     pop_
 
     withContext (render next <> " option") $ do
@@ -189,11 +185,13 @@ instance Parser CliParser where
         _ -> pure ()
 
       pure result
-  feedParser parser@(CliCommand _ subtree) = do
+  feedParser (CliCommand info subtree) = do
     next <- peek
-    guard $ parser `accepts` next
+    case next of
+      Argument s -> guard $ s `elem` cmdNames info
+      _          -> empty
+    pop_
 
     withContext (render next <> " command") $
-      pop_
-      *> satiate subtree
+      satiate subtree
       >>= liftEither . resolve

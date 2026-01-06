@@ -57,9 +57,6 @@ class Resolve p => Parser (p :: Type -> Type) where
   -- | Generate usage information for a 'Parser' instance.
   renderParser :: p r -> Builder
 
-  -- | Check whether this parser accepts a particular token.
-  accepts :: p r -> Token p -> Bool
-
   -- | Lift this parser into an appropriate 'StreamParser'.
   feedParser :: p r -> StreamParser (Token p) r
 

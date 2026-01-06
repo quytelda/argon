@@ -57,10 +57,6 @@ instance Parser SubParser where
   renderParser (SubParameter tp)  = render $ parserHint tp
   renderParser (SubOption key tp) = render key <> "=" <> render (parserHint tp)
 
-  accepts (SubParameter _) (SubArgument _) = True
-  accepts (SubOption key _) (SubAssoc k _) = key == k
-  accepts _ _                              = False
-
   feedParser (SubParameter tp) = do
     peek >>= \case
       SubArgument s ->
