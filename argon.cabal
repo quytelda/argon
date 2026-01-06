@@ -56,6 +56,7 @@ test-suite argon-test
       General
       ParseTreeSpec
       Spec
+      TestParsers
       Paths_argon
   autogen-modules:
       Paths_argon

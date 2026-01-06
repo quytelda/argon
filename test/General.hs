@@ -4,56 +4,15 @@
 module General (spec) where
 
 import           Control.Applicative
-import           Control.Monad
-import           Data.Bifunctor
 import           Data.Either
-import           Data.List.NonEmpty  (NonEmpty)
-import qualified Data.List.NonEmpty  as NonEmpty
-import           Data.Text           (Text)
-import qualified Data.Text           as T
 
 import           Test.Hspec
 
-import           Argon
 import           Parser.Cli
-import           Parser.Sub
-import           Parser.Text
 import           ParseTree
 import           Text
 
---------------------------------------------------------------------------------
--- Sample Options for Testing
-
-opt_example_unit :: ParseTree CliParser ()
-opt_example_unit = option [LongFlag "example"] "" $ pure ()
-
-opt_e_unit :: ParseTree CliParser ()
-opt_e_unit = option [ShortFlag 'e'] "" $ pure ()
-
-opt_e_param :: ParseTree CliParser Text
-opt_e_param = option [ShortFlag 'e'] "" defaultParameter
-
-opt_f_unit :: ParseTree CliParser ()
-opt_f_unit = option [ShortFlag 'f'] "" $ pure ()
-
-opt_example_param :: ParseTree CliParser Text
-opt_example_param = option [LongFlag "example"] "" defaultParameter
-
-opt_example_switch :: ParseTree CliParser Bool
-opt_example_switch = switch [LongFlag "example"] ""
-
-opt_example_param_optional :: ParseTree CliParser Text
-opt_example_param_optional =
-  option [LongFlag "example"] "" (defaultParameter <|> pure "asdf")
-
-param_text :: ParseTree CliParser Text
-param_text = defaultParameter
-
-option_asdf :: ParseTree CliParser Text
-option_asdf = option ["--asdf", "-a"] "" $ pure "qwer"
-
-command_asdf :: ParseTree CliParser Text
-command_asdf = command ["asdf"] "" $ pure "qwer"
+import           TestParsers
 
 optionSpec :: Spec
 optionSpec = do
