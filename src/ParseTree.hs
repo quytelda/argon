@@ -17,7 +17,7 @@ import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
 import           Data.Proxy
-import           Data.Text              (Text)
+import           Data.Text            (Text)
 
 import           Parser
 import           Stream
@@ -40,14 +40,20 @@ data ParseTree (p :: Type -> Type) (r :: Type) where
   -- | Abstracts many
   ManyNode :: ParseTree p r -> ParseTree p [r]
 
-instance Functor (ParseTree p) where
-  fmap = liftA2 ($) . pure
+instance Functor p => Functor (ParseTree p) where
+  fmap _ EmptyNode          = EmptyNode
+  fmap f (ValueNode value)  = ValueNode $ f value
+  fmap f (ParseNode parser) = ParseNode $ fmap f parser
+  fmap f (ProdNode g l r)   = ProdNode (\u v -> f $ g u v) l r
+  fmap f (SumNode l r)      = SumNode (fmap f l) (fmap f r)
+  fmap f node               = liftA2 ($) (pure f) node
+  -- This takes advantage of the fact that f <$> x = pure f <*> x.
 
-instance Applicative (ParseTree p) where
+instance Functor p => Applicative (ParseTree p) where
   pure = ValueNode
   liftA2 = ProdNode
 
-instance Alternative (ParseTree p) where
+instance Functor p => Alternative (ParseTree p) where
   empty = EmptyNode
   (<|>) = SumNode
   many = ManyNode
