@@ -37,7 +37,7 @@ class Resolve f where
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.
-class Resolve p => Parser (p :: Type -> Type) where
+class (Functor p, Resolve p) => Parser (p :: Type -> Type) where
   -- | The token type this parser operates upon.
   data Token p
 

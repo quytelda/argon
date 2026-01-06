@@ -37,8 +37,8 @@ data ParseTree (p :: Type -> Type) (r :: Type) where
   ProdNode :: (u -> v -> r) -> ParseTree p u -> ParseTree p v -> ParseTree p r
   -- | Abstracts (<|>)
   SumNode :: ParseTree p r -> ParseTree p r -> ParseTree p r
-  -- | Abstracts many
-  ManyNode :: ParseTree p r -> ParseTree p [r]
+  -- | Abstracts 'many' (@MaybeNode False@) and 'some' (@MaybeNode True@).
+  ManyNode :: Bool -> ParseTree p r -> ParseTree p [r]
 
 instance Functor p => Functor (ParseTree p) where
   fmap _ EmptyNode          = EmptyNode
@@ -56,8 +56,8 @@ instance Functor p => Applicative (ParseTree p) where
 instance Functor p => Alternative (ParseTree p) where
   empty = EmptyNode
   (<|>) = SumNode
-  many = ManyNode
-  some p = ProdNode (:) p (ManyNode p)
+  many = ManyNode False
+  some = ManyNode True
 
 instance HasValency p => HasValency (ParseTree p) where
   valency EmptyNode        = Just 0
@@ -65,7 +65,7 @@ instance HasValency p => HasValency (ParseTree p) where
   valency (ParseNode p)    = valency p
   valency (ProdNode _ l r) = (+) <$> valency l <*> valency r
   valency (SumNode l r)    = max <$> valency l <*> valency r
-  valency (ManyNode p)     = case valency p of
+  valency (ManyNode _ p)   = case valency p of
                                Just n | n <= 0 -> Just 0
                                _               -> Nothing
 
@@ -75,10 +75,19 @@ instance Resolve p => Resolve (ParseTree p) where
   resolve (ParseNode parser) = resolve parser
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
   resolve (SumNode l r)      = resolve l <> resolve r
-  resolve (ManyNode _)       = pure []
-  -- TODO: What if the ManyNode contains a resolvable node (e.g.
-  -- `ManyNode (ValueNode 5)`)? Handling it this way avoids infinite
-  -- loops, but might not be the expected behavior.
+  resolve (ManyNode False _) = pure []
+  resolve (ManyNode True  p) = pure <$> resolve p
+  -- NOTE: If a ManyNode contains a resolvable node, one might expect
+  -- the result to be an infinite list (e.g. `resolve $ many
+  -- (ValueNode 1)` to give `Right [1,1,1,1,..]`) or for the
+  -- computation to diverge (as is the case for `many (Just 1)`).
+  -- However, by only attempting at most resolutions of the subtree,
+  -- we will get either zero or one results. For example, `resolve $
+  -- many (ValueNode 1)` will give `Right []`.
+  --
+  -- Whether this is the best possible way to handle the situation is
+  -- unclear. This avoids infinite loops, but might not be the
+  -- expected behavior in some unforseen use-case.
 
 instance Parser p => Render (ParseTree p r) where
   -- special cases
@@ -89,7 +98,8 @@ instance Parser p => Render (ParseTree p r) where
   render (ParseNode parser)        = renderParser parser
   render (ProdNode _ l r)          = render l <> sepProd (Proxy @p) <> render r
   render (SumNode l r)             = render l <> sepSum (Proxy @p) <> render r
-  render (ManyNode p)              = "[" <> render p <> "...]"
+  render (ManyNode False p)        = "[" <> render p <> "...]"
+  render (ManyNode True p)         = render p <> "..."
 
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. Once a subtree consumes input, it is replaced with
@@ -104,10 +114,10 @@ feed (ProdNode f l r) =
 feed (SumNode l r) =
   (SumNode <$> feed l <*> pure r) <|>
   (SumNode l <$> feed r)
-feed (ManyNode tree) =
+feed (ManyNode _ tree) =
   ProdNode (:)
   <$> feed tree
-  <*> pure (ManyNode tree)
+  <*> pure (ManyNode False tree)
 
 -- | Repeatedly feed input to the tree using `feed` until no input is
 -- no longer consumed.

@@ -62,7 +62,7 @@ collectOptions tree = go tree mempty
       Map.union $ Map.mapKeys (info :) $ collectOptions subtree
     go (ProdNode _ l r) = go r . go l
     go (SumNode l r)    = go r . go l
-    go (ManyNode p)     = go p
+    go (ManyNode _ p)   = go p
     go _                = id
 
 fmtOptionTable :: [OptionHelp] -> Builder
