@@ -1,21 +1,49 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs             #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies      #-}
 
 module Parser
   ( HasValency(..)
   , valencyIs
+  , ResolveError(..)
+  , sumResults
   , Resolve(..)
+  , resolveLifted
   , Parser(..)
   ) where
 
+import           Control.Monad.Except
+import           Data.Bifunctor
 import           Data.Kind
+import qualified Data.List            as List
 import           Data.Proxy
-import           Data.Text              (Text)
+import           Data.Text            (Text)
 
 import           Stream
 import           Text
+
+-- | Resolving an object might fail if not enough input has been
+-- provided or the result depends on an unresolvable value (e.g.
+-- empty).
+data ResolveError
+  = EmptyError
+  | ExpectedError [Builder]
+  deriving (Eq, Show)
+
+instance Semigroup ResolveError where
+  ExpectedError ls <> ExpectedError rs = ExpectedError $ ls <> rs
+  l <> EmptyError                      = l
+  EmptyError <> r                      = r
+
+instance Render ResolveError where
+  render EmptyError = "empty"
+  render (ExpectedError ts) = "expected: " <> mconcat (List.intersperse " or " ts)
+
+sumResults :: Either ResolveError r -> Either ResolveError r -> Either ResolveError r
+sumResults (Left e1) (Left e2) = Left $ e1 <> e2
+sumResults l r                 = l <> r
 
 -- | Valency represents the maxiumum number of arguments a parser
 -- might consume.
@@ -33,7 +61,10 @@ valencyIs condition = all condition . valency
 -- | Things that can be resolved to a value, but might fail to
 -- resolve.
 class Resolve f where
-  resolve :: f r -> Either Builder r
+  resolve :: f r -> Either ResolveError r
+
+resolveLifted :: Resolve f => f r -> StreamParser tok r
+resolveLifted = liftEither . first render . resolve
 
 -- | A type class for meant to parameterize 'ParseTree's. A parser can
 -- consume input token and produce a result or throw an error.

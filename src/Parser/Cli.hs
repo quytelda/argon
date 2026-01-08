@@ -91,11 +91,11 @@ instance HasValency CliParser where
 
 instance Resolve CliParser where
   resolve (CliParameter (TextParser hint _)) =
-    throwError $ "expected " <> TLB.fromText hint
+    throwError $ ExpectedError [TLB.fromText hint]
   resolve (CliOption info _) =
-    throwError $ "expected option " <> render (optHead info)
+    throwError $ ExpectedError [render (optHead info)]
   resolve (CliCommand info _) =
-    throwError $ "expected command " <> render (cmdHead info)
+    throwError $ ExpectedError [render (cmdHead info)]
 
 instance Parser CliParser where
   data Token CliParser
@@ -194,4 +194,4 @@ instance Parser CliParser where
 
     withContext (render next <> " command") $
       satiate subtree
-      >>= liftEither . resolve
+      >>= resolveLifted

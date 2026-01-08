@@ -30,9 +30,9 @@ instance HasValency SubParser where
 
 instance Resolve SubParser where
   resolve (SubParameter (TextParser hint _)) =
-    throwError $ "expected " <> TLB.fromText hint
+    throwError $ ExpectedError [TLB.fromText hint]
   resolve (SubOption key (TextParser hint _)) =
-    throwError $ "expected " <> TLB.fromText key <> "=" <> TLB.fromText hint
+    throwError $ ExpectedError [TLB.fromText key <> "=" <> TLB.fromText hint]
 
 instance Render (SubParser r) where
   render = renderParser

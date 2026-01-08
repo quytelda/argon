@@ -58,6 +58,17 @@ spec = do
       parseArguments (many opt_e_param) ["blah"]
         `shouldBe` Right ([], [Argument "blah"])
 
+    it "doesn't swallow arguments" $ do
+      parseArguments (many $ opt_f_unit *> opt_e_param) ["-f", "-e", "asdf", "-f"]
+        `shouldBe` Left "expected: -e"
+        -- Some attempts at implementing many/some resulted in
+        -- arguments being silently swallowed if they were consumed by
+        -- a parser inside a ManyNode which didn't receive enough
+        -- input to resolve. In some cases this didn't occur until the
+        -- second instance of the subtree was triggered. The expected
+        -- behavior in this case is to fail with a message about what
+        -- input was missing.
+
   describe "some" $ do
     it "parses multiple instances" $ do
       parseArguments (some opt_e_param) ["-e", "asdf", "-e", "qwer", "-e", "zxcv"]
@@ -67,10 +78,8 @@ spec = do
         `shouldBe` Left "unexpected blah"
 
     it "doesn't swallow arguments" $ do
-      parseArguments (many $ opt_f_unit *> opt_e_param) ["-f", "-e", "asdf", "-f"]
-        `shouldBe` Left "expected option -e"
       parseArguments (some $ opt_f_unit *> opt_e_param) ["-f", "-e", "asdf", "-f"]
-        `shouldBe` Left "expected option -e"
+        `shouldBe` Left "expected: -e"
         -- Some attempts at implementing many/some resulted in
         -- arguments being silently swallowed if they were consumed by
         -- a parser inside a ManyNode which didn't receive enough

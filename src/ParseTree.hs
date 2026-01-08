@@ -73,11 +73,11 @@ instance HasValency p => HasValency (ParseTree p) where
   -- infinite or zero depending on whether the valency of 'p' is zero.
 
 instance Resolve p => Resolve (ParseTree p) where
-  resolve EmptyNode          = throwError "empty"
+  resolve EmptyNode          = throwError EmptyError
   resolve (ValueNode value)  = pure value
   resolve (ParseNode parser) = resolve parser
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
-  resolve (SumNode l r)      = resolve l <> resolve r
+  resolve (SumNode l r)      = sumResults (resolve l) (resolve r)
   resolve (ManyNode False _) = pure []
   resolve (ManyNode True  p) = pure <$> resolve p
   -- NOTE: If a ManyNode contains a resolvable node, one might expect
@@ -146,7 +146,7 @@ runParseTree tree args =
         Left err ->
           case args' of
             (arg:_) -> Left $ "unexpected " <> render arg
-            _       -> Left err
+            _       -> Left $ render err
 
 parseArguments
   :: Parser p
