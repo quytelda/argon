@@ -27,17 +27,17 @@ import           Text
 -- 'p' which evaluates to a value of type 'r' supplied with the proper
 -- input.
 data ParseTree (p :: Type -> Type) (r :: Type) where
-  -- | Terminal node with no value
+  -- | Terminal node with no value (abstracts 'empty')
   EmptyNode :: ParseTree p r
-  -- | Terminal node with a resolved value
+  -- | A terminal node with a resolved value (abstracts 'pure')
   ValueNode :: r -> ParseTree p r
   -- | A parser awaiting input
   ParseNode :: p r -> ParseTree p r
-  -- | Abstracts liftA2
+  -- | Abstracts 'liftA2' and by extension '(<*>)'
   ProdNode :: (u -> v -> r) -> ParseTree p u -> ParseTree p v -> ParseTree p r
-  -- | Abstracts (<|>)
+  -- | Abstracts '(<|>)'
   SumNode :: ParseTree p r -> ParseTree p r -> ParseTree p r
-  -- | Abstracts 'many' (@MaybeNode False@) and 'some' (@MaybeNode True@).
+  -- | Abstracts 'many' (@MaybeNode False@) and 'some' (@MaybeNode True@)
   ManyNode :: Bool -> ParseTree p r -> ParseTree p [r]
 
 instance Functor p => Functor (ParseTree p) where
@@ -68,6 +68,9 @@ instance HasValency p => HasValency (ParseTree p) where
   valency (ManyNode _ p)   = case valency p of
                                Just n | n <= 0 -> Just 0
                                _               -> Nothing
+  -- In the above case of 'ManyNode _ p', a ManyNode can accept an
+  -- arbitrary number of parameters, so the maximum valency is either
+  -- infinite or zero depending on whether the valency of 'p' is zero.
 
 instance Resolve p => Resolve (ParseTree p) where
   resolve EmptyNode          = throwError "empty"
