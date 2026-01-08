@@ -9,6 +9,7 @@ module HelpInfo
   ( renderHelpInfo
   ) where
 
+import qualified Data.List              as List
 import qualified Data.List.NonEmpty     as NonEmpty
 import           Data.Map.Strict        (Map)
 import qualified Data.Map.Strict        as Map
@@ -24,11 +25,11 @@ import           ParseTree
 import           Text
 
 data OptionHelp = OptionHelp
-  { ohShorts :: TL.Text
-  , ohLongs  :: TL.Text
-  , ohArg    :: TL.Text
-  , ohDesc   :: TL.Text
-  } deriving (Show)
+  { ohLongs  :: TL.Text -- Column 2
+  , ohShorts :: TL.Text -- Column 1
+  , ohArg    :: TL.Text -- Column 3
+  , ohDesc   :: TL.Text -- Column 4
+  } deriving (Eq, Ord, Show)
 
 -- | Like `Control.Monad.when` but for 'Monoid' instead of
 -- 'Alternative'.
@@ -38,8 +39,8 @@ mwhen condition a = if condition then a else mempty
 mkOptionHelp :: OptionInfo -> ParseTree SubParser r -> OptionHelp
 mkOptionHelp OptionInfo{..} subtree =
   OptionHelp
-  { ohShorts = fmtFlagList shorts
-  , ohLongs  = fmtFlagList longs
+  { ohLongs  = fmtFlagList longs
+  , ohShorts = fmtFlagList shorts
   , ohArg    = mwhen (valencyIs (> 0) subtree)
                $ renderLazyText subtree
   , ohDesc   = TL.fromStrict optHelp
@@ -66,7 +67,7 @@ collectOptions tree = go tree mempty
     go _                = id
 
 fmtOptionTable :: [OptionHelp] -> Builder
-fmtOptionTable xs = foldMap formatRow xs
+fmtOptionTable xs = foldMap formatRow $ List.sort xs
   where
     maxLengthBy f = maximum $ TL.length . f <$> xs
     col1width = maxLengthBy ohShorts
