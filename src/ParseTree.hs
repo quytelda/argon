@@ -114,9 +114,7 @@ feed (ParseNode parser) = ValueNode <$> feedParser parser
 feed (ProdNode f l r) =
   (ProdNode f <$> feed l <*> pure r) <|>
   (ProdNode f l <$> feed r)
-feed (SumNode l r) =
-  (SumNode <$> feed l <*> pure r) <|>
-  (SumNode l <$> feed r)
+feed (SumNode l r) = feed l <|> feed r
 feed (ManyNode _ tree) =
   ProdNode (:)
   <$> feed tree

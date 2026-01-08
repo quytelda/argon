@@ -50,6 +50,13 @@ spec = do
         parseArguments (opt_e_param <|> pure "asdf") []
           `shouldBe` Right ("asdf", [])
 
+    context "when one child is triggered" $ do
+      it "prunes the other child" $ do
+        parseArguments (opt_e_unit <|> opt_f_unit) ["-e", "-f"]
+          `shouldBe` Right ((), [ShortOption 'f'])
+        parseArguments (opt_e_unit <|> opt_f_unit) ["-f", "-e"]
+          `shouldBe` Right ((), [ShortOption 'e'])
+
   describe "many" $ do
     it "parses multiple instances" $ do
       parseArguments (many opt_e_param) ["-e", "asdf", "-e", "qwer", "-e", "zxcv"]
@@ -57,6 +64,11 @@ spec = do
     it "parses zero instances" $ do
       parseArguments (many opt_e_param) ["blah"]
         `shouldBe` Right ([], [Argument "blah"])
+
+    it "handles compound trees" $ do
+      let tree = (opt_f_unit *> opt_e_param) <|> opt_example_param
+      parseArguments (many tree) ["-f", "-e", "asdf", "--example", "qwer"]
+        `shouldBe` Right (["asdf", "qwer"], [])
 
     it "doesn't swallow arguments" $ do
       parseArguments (many $ opt_f_unit *> opt_e_param) ["-f", "-e", "asdf", "-f"]
@@ -77,16 +89,14 @@ spec = do
       parseArguments (some opt_e_param) ["blah"]
         `shouldBe` Left "unexpected blah"
 
+    it "handles compound trees" $ do
+      let tree = (opt_f_unit *> opt_e_param) <|> opt_example_param
+      parseArguments (some tree) ["-f", "-e", "asdf", "--example", "qwer"]
+        `shouldBe` Right (["asdf", "qwer"], [])
+
     it "doesn't swallow arguments" $ do
       parseArguments (some $ opt_f_unit *> opt_e_param) ["-f", "-e", "asdf", "-f"]
         `shouldBe` Left "expected: -e"
-        -- Some attempts at implementing many/some resulted in
-        -- arguments being silently swallowed if they were consumed by
-        -- a parser inside a ManyNode which didn't receive enough
-        -- input to resolve. In some cases this didn't occur until the
-        -- second instance of the subtree was triggered. The expected
-        -- behavior in this case is to fail with a message about what
-        -- input was missing.
 
   describe "optional" $ do
     it "parses exactly one instance" $ do
