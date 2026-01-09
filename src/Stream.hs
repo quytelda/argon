@@ -16,8 +16,7 @@ with error handling and context management.
 -}
 module Stream
   ( -- * Types
-    ParseResult(..)
-  , StreamParser(..)
+    StreamParser(..)
 
     -- * Context
   , errorInContext
@@ -39,21 +38,6 @@ import           Control.Applicative
 import           Control.Monad.Except
 import qualified Data.List              as List
 import           Data.Text.Lazy.Builder (Builder)
-
--- | The result of a StreamParser computation.
-data ParseResult tok a
-  = ParseResult [Builder] [tok] a -- ^ A successful result
-  | ParseEmpty [Builder] [tok] -- ^ The parser doesn't apply
-  | ParseError [Builder] Builder -- ^ The parser failed
-  deriving (Functor)
-
-instance Semigroup (ParseResult tok a) where
-  l <> r =
-    case (l, r) of
-      (ParseError {}, _)  -> l
-      (_, ParseError {})  -> r
-      (ParseEmpty {}, _)  -> r
-      (ParseResult {}, _) -> l
 
 -- | The amazing stream parsing monad! This monad is comparable to a
 -- combination of StateT, ExceptT, and MaybeT. It tracks state (the
