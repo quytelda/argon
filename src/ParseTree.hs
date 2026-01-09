@@ -135,16 +135,16 @@ runParseTree
   -> [Token p]
   -> Either Builder (r, [Token p])
 runParseTree tree args =
-  runStreamParser (satiate tree) [] args
-    (\tree' _ leftovers -> case resolve tree' of
+  runStreamParser (satiate tree) args
+    (\tree' leftovers -> case resolve tree' of
         Right value -> Right (value, leftovers)
         Left err ->
           case leftovers of
             (token:_) -> Left $ "unexpected " <> render token
             _         -> Left $ render err
     )
-    (\_ _ -> Left "empty")
-    (\contexts err -> Left $ errorInContext contexts err)
+    (\_ -> Left "empty")
+    Left
 
 parseArguments
   :: Parser p
