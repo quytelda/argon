@@ -105,8 +105,8 @@ instance Parser p => Render (ParseTree p r) where
   render (ManyNode True p)         = render p <> "..."
 
 -- | 'feed' traverses the tree until it activates a parser that
--- consumes input. Once a subtree consumes input, it is replaced with
--- an updated subtree and further traversal ceases.
+-- consumes input. When a subtree successfully consumes input, it is
+-- replaced with an updated subtree and the traversal ceases.
 feed :: Parser p => ParseTree p r -> StreamParser (Token p) (ParseTree p r)
 feed EmptyNode = empty
 feed (ValueNode _) = empty
@@ -120,8 +120,9 @@ feed (ManyNode _ tree) =
   <$> feed tree
   <*> pure (ManyNode False tree)
 
--- | Repeatedly feed input to the tree using `feed` until no input is
--- no longer consumed.
+-- | Repeatedly traverse the tree, each time activating the first
+-- parser that can consume available input, until no more input can be
+-- consumed.
 satiate :: Parser p => ParseTree p r -> StreamParser (Token p) (ParseTree p r)
 satiate tree = do
   result <- optional $ feed tree
@@ -134,17 +135,18 @@ runParseTree
   => ParseTree p r
   -> [Token p]
   -> Either Builder (r, [Token p])
-runParseTree tree args =
-  runStreamParser (satiate tree) args
-    (\tree' leftovers -> case resolve tree' of
-        Right value -> Right (value, leftovers)
-        Left err ->
-          case leftovers of
-            (token:_) -> Left $ "unexpected " <> render token
-            _         -> Left $ render err
-    )
-    (\_ -> Left "empty")
-    Left
+runParseTree tree =
+  runStreamParser (satiate tree)
+  (\tree' leftovers ->
+     case resolve tree' of
+       Right value -> Right (value, leftovers)
+       Left err ->
+         case leftovers of
+           (token:_) -> Left $ "unexpected " <> render token
+           _         -> Left $ render err
+  )
+  (Left . const "empty")
+  Left
 
 parseArguments
   :: Parser p
