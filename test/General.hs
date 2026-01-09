@@ -50,7 +50,7 @@ optionSpec = do
     context "when no argument is expected" $ do
       it "parsing fails" $ do
         parseArguments opt_example_unit ["--example=qwer"]
-          `shouldSatisfy` isLeft
+          `shouldBe` Left "--example option: unrecognized subargument: qwer"
 
   context "when no argument is expected" $ do
     context "when an argument is available" $ do
@@ -68,7 +68,7 @@ optionSpec = do
     context "when no argument is provided" $ do
       it "fails to parse" $ do
         parseArguments opt_example_param ["--example"]
-          `shouldSatisfy` isLeft
+          `shouldBe` Left "--example option: expected: STRING"
     context "when an argument is provided" $ do
       it "the argument is consumed" $ do
         parseArguments opt_example_param ["--example", "qwer"]
@@ -108,7 +108,7 @@ generalSpec = do
   context "when not enough input is provided" $ do
     it "fails to generate a result" $ do
       parseArguments param_text []
-        `shouldSatisfy` isLeft
+        `shouldBe` Left "expected: STRING"
 
   context "when not all input can be consumed" $ do
     it "returns unconsumed arguments" $ do
