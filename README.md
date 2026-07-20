@@ -30,7 +30,7 @@ accounts - we'll call it "mkuser". The goal will be to provide a
 command line interface with the following syntax:
 
 ```
-mkuser [--uid=INT] [--system] [--groups=GROUP...] USERNAME
+mkuser [--uid=INT] [--system] [--groups={GROUP...}] USERNAME
 ```
 
 First, let's create a new record that captures the program's runtime
@@ -245,7 +245,7 @@ our parser in GHCi using `render` from `Mangrove.Text`:
 
 ```
 ghci> render parseSettings
-"[--uid=INT] [--system] [--groups=STRING...] STRING"
+"[--uid=INT] [--system] [--groups={STRING...}] STRING"
 ```
 
 This output indicates that our parser accepts (but does not require) a
@@ -318,14 +318,16 @@ a nice summary of how to use it:
 
 ```
 ./mkuser --help
-Usage: mkuser --help|[--uid=INT] [--system] [--groups=STRING...] STRING
+Usage:
+mkuser [--uid=INT] [--system] [--groups={STRING...}] STRING
+mkuser --help
 
 Create user accounts
 
-    --help               Display help and usage information
--g  --groups  STRING...  Specify what groups the user is part of
--s  --system             Create a system user
--u  --uid     INT        Specify a user ID
+    --help                 Display help and usage information
+-g  --groups  {STRING...}  Specify what groups the user is part of
+-s  --system               Create a system user
+-u  --uid     INT          Specify a user ID
 ```
 
 __NOTE__: If an interface defines any commands (see below),
@@ -363,15 +365,17 @@ prm_name = parameter defaultParser {parserHint = "USERNAME"}
 Now our help output looks like this:
 
 ```
-./mkuser --help
-Usage: mkuser --help|[--uid=INT] [--system] [--groups=GROUP...] USERNAME
+$ ./mkuser --help
+Usage:
+mkuser [--uid=INT] [--system] [--groups={GROUP...}] USERNAME
+mkuser --help
 
 Create user accounts
 
-    --help              Display help and usage information
--g  --groups  GROUP...  Specify what groups the user is part of
--s  --system            Create a system user
--u  --uid     INT       Specify a user ID
+    --help                Display help and usage information
+-g  --groups  {GROUP...}  Specify what groups the user is part of
+-s  --system              Create a system user
+-u  --uid     INT         Specify a user ID
 ```
 
 ## Commands
