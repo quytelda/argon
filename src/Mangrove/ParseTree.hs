@@ -58,8 +58,6 @@ import           Mangrove.Valency
 data ParseTree (scheme :: Type -> Type) (r :: Type) where
   -- | Terminal node with no value (abstracts 'empty')
   EmptyNode :: ParseTree scheme r
-  -- | A control node that triggers a help request when reached
-  HelpNode :: ParseTree scheme r
   -- | A terminal node with a resolved value (abstracts 'pure')
   ValueNode :: r -> ParseTree scheme r
   -- | A parser awaiting input
@@ -73,7 +71,6 @@ data ParseTree (scheme :: Type -> Type) (r :: Type) where
 
 instance Functor p => Functor (ParseTree p) where
   fmap _ EmptyNode          = EmptyNode
-  fmap _ HelpNode           = HelpNode
   fmap f (ValueNode value)  = ValueNode $ f value
   fmap f (ParseNode parser) = ParseNode $ fmap f parser
   fmap f (ProdNode g l r)   = ProdNode (\u v -> f $ g u v) l r
@@ -93,7 +90,6 @@ instance Functor p => Alternative (ParseTree p) where
 
 instance Valency s => Valency (ParseTree s) where
   valency EmptyNode         = Just 0
-  valency HelpNode          = Just 0
   valency (ValueNode _)     = Just 0
   valency (ParseNode p)     = valency p
   valency (ProdNode _ l r)  = (+) <$> valency l <*> valency r
@@ -109,7 +105,6 @@ instance Valency s => Valency (ParseTree s) where
   -- Since ParseTrees themselves don't accept inputs, we can provide a
   -- slightly more efficient implementation of nullary.
   nullary EmptyNode         = True
-  nullary HelpNode          = True
   nullary (ValueNode _)     = True
   nullary (ParseNode p)     = nullary p
   nullary (ProdNode _ l r)  = nullary l && nullary r
@@ -118,7 +113,6 @@ instance Valency s => Valency (ParseTree s) where
 
 instance Resolve s => Resolve (ParseTree s) where
   resolve EmptyNode          = EmptyError
-  resolve HelpNode           = EmptyError
   resolve (ValueNode value)  = pure value
   resolve (ParseNode parser) = resolve parser
   resolve (ProdNode f l r)   = f <$> resolve l <*> resolve r
@@ -249,7 +243,6 @@ class (Functor s, Resolve s) => Scheme (s :: Type -> Type) where
 -- replaced with an updated subtree and the traversal ceases.
 feed :: Scheme s => ParseTree s r -> StreamParser (Token s) (ParseTree s r)
 feed EmptyNode = empty
-feed HelpNode = requestHelp
 feed (ValueNode _) = empty
 feed (ParseNode parser) = ValueNode <$> activate parser
 feed (ProdNode f l r) =

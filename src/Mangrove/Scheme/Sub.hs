@@ -93,7 +93,6 @@ type SubParser = ParseTree SubScheme
 -- allows us to determine if we need to parse "KEY=VALUE" pairs.
 hasSubOptions :: ParseTree SubScheme r -> Bool
 hasSubOptions EmptyNode                 = False
-hasSubOptions HelpNode                  = False
 hasSubOptions (ValueNode _)             = False
 hasSubOptions (ParseNode (Parameter _)) = False
 hasSubOptions (ParseNode (Option _ _))  = True
