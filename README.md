@@ -1,11 +1,26 @@
 # Mangrove
 
-Mangrove is a library for writing command line argument parsers using
+Mangrove is a library for building command line argument parsers using
 Haskell's `Applicative` interface. It provides parsers for UNIX-style
 command line syntax, including positional parameters, named options,
 and commands, as well as complex subparameters and suboptions (e.g.
 `--mount read-only,src=/dev/sda1,dst=/data`). It is also extensible,
 so you can define alternative command line syntaxes.
+
+## Building
+
+This project uses `stack` as its primary build system (though building
+with `cabal` should also work). As usual, you can build the library
+by running `stack build` and you can install it with `stack install`.
+Use `stack haddock` to build the API documentation.
+
+## Test Suite
+
+Mangrove has a test suite using HSpec. Run `stack test` to build and
+run the tests. The `main` branch should always pass all tests, so if
+something fails, please make an issue!
+
+# Tutorial
 
 ## A Metaphor
 
