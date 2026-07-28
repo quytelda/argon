@@ -133,7 +133,7 @@ instance Resolve UnixScheme where
     ExpectedError [render $ cmdHead info]
 
 instance Separable UnixScheme where
-  separate p@(Option _ HelpNode) = Exhibit Nothing [Modal True p]
+  separate p@(HelpOption _) = Exhibit Nothing [Modal True p]
   separate (Command info subtree) =
     Exhibit Nothing $ (Modal False <$> maybeToList mregular) <> modals
     where
@@ -319,10 +319,7 @@ addHelpOptions
 addHelpOptions flags desc tree = ParseNode helpOption <|> go tree
   where
     helpOption :: UnixScheme a
-    helpOption =
-      Option
-      (OptionInfo flags desc)
-      HelpNode
+    helpOption = HelpOption $ OptionInfo flags desc
 
     go :: ParseTree UnixScheme a -> ParseTree UnixScheme a
     go (ParseNode (Command info subtree)) =
