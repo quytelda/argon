@@ -112,17 +112,22 @@ data UnixScheme r
   | Command CommandInfo (ParseTree UnixScheme r)
   -- | A named option that might support suboptions
   | Option OptionInfo (ParseTree SubScheme r)
+  -- | A special option that requests help information
+  | HelpOption OptionInfo
   deriving (Functor)
 
 instance Valency UnixScheme where
   valency (Parameter _)       = Just 1
   valency (Command _ subtree) = fmap (+1) (valency subtree)
   valency (Option _ subtree)  = fmap (max 2) (valency subtree)
+  valency (HelpOption _)      = Just 1
 
 instance Resolve UnixScheme where
   resolve (Parameter (TextParser hint _)) =
     ExpectedError [render hint]
   resolve (Option info _) =
+    ExpectedError [render $ optHead info]
+  resolve (HelpOption info) =
     ExpectedError [render $ optHead info]
   resolve (Command info _) =
     ExpectedError [render $ cmdHead info]
@@ -252,6 +257,17 @@ instance Scheme UnixScheme where
           (_, result) <- parseSubargs []
           pure result
 
+  activate (HelpOption info) = do
+    -- Arguments should never be interpreted as options when escaped.
+    getEscaped >>= guard . not
+
+    (flag, mbound) <- peek >>= parseUnixOption
+    guard $ flag `elem` optFlags info
+    pop_
+
+    withContext (UnixOption flag mbound)
+      requestHelp
+
   activate (Command info subtree) = do
     -- Arguments should never be interpreted as commands when escaped.
     getEscaped >>= guard . not
@@ -277,6 +293,8 @@ instance Scheme UnixScheme where
           separator = case flag of
                         LongFlag _ -> "="
                         _          -> ""
+  usageInfo (HelpOption info) =
+    render (optHead info)
 
 instance Render (Token UnixScheme) where
   render (UnixArgument s)                      = render s
