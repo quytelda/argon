@@ -30,7 +30,6 @@ library
       Mangrove.ArgumentParser
       Mangrove.ParseTree
       Mangrove.Resolve
-      Mangrove.Scheme
       Mangrove.Scheme.Sub
       Mangrove.Scheme.Unix
       Mangrove.Separable

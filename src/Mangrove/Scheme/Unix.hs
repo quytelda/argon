@@ -47,7 +47,6 @@ import qualified Data.Text.Lazy.Builder  as TLB
 import           Mangrove.ArgumentParser
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
-import           Mangrove.Scheme
 import           Mangrove.Scheme.Sub     (SubScheme)
 import qualified Mangrove.Scheme.Sub     as Sub
 import           Mangrove.Separable
