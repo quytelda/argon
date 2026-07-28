@@ -17,7 +17,6 @@ import           Data.Text          (Text)
 
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
-import           Mangrove.Scheme
 import           Mangrove.Stream
 import           Mangrove.Text
 

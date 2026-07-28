@@ -11,18 +11,28 @@ Module      : Mangrove.ParseTree
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
+This module contains the data types and type classes that make up a
+generic argument parser.
+
 A 'ParseTree' is a tree-shaped parser that "filter-feeds" on a stream
 of arguments, collecting inputs at the leaves and feeding the results
 up the tree for processing. 'ParseTree's are parameterized by the
 parser scheme that determines the kind of inputs it accepts.
+
+A "scheme" is a system of parsers and tokens. It determines the method
+by which argument strings are separated. It parses a sequence of
+arguments into tokens and values.
 -}
 module Mangrove.ParseTree
-  ( -- * Types
+  ( -- * Parse Trees
     ParseTree(..)
   , isProduct
   , isSum
   , isOptional
   , isChoice
+
+    -- * Parsing Schemes
+  , Scheme(..)
 
     -- * Feeding Trees
   , satiate
@@ -34,11 +44,13 @@ import           Data.Maybe
 import           Data.Proxy
 
 import           Mangrove.Resolve
-import           Mangrove.Scheme
 import           Mangrove.Separable
 import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.Valency
+
+--------------------------------------------------------------------------------
+-- Parse Trees
 
 -- | `ParseTree scheme r` is an expression tree composed of parsers
 -- from scheme @scheme@ which evaluates to a value of type @r@ when
@@ -198,6 +210,37 @@ instance Separable s => Separable (ParseTree s) where
                <> [liftA2 node u v | u <- modalsL, v <- modalsR]
   separate (ParseNode p) = ParseNode <$> separate p
   separate n = Exhibit (Just n) []
+
+--------------------------------------------------------------------------------
+-- Parsing Schemes
+
+-- | A scheme is a system of parsers and tokens. It parses a sequence
+-- of arguments into tokens and values.
+class (Functor s, Resolve s) => Scheme (s :: Type -> Type) where
+  -- | A token represents a particular interpretation of an argument
+  -- string under this parsing scheme.
+  data Token s
+
+  -- | 'delimiter' is the character that separates argument strings in
+  -- combined string representation. For example, arguments in the CLI
+  -- command @ls -a -l /var@ are separated by spaces.
+  delimiter :: Proxy s -> Char
+
+  -- | Parse special control arguments that don't represent tokens in
+  -- the scheme, but control aspects of how parsing proceeds (e.g.
+  -- escaping).
+  parseSpecials :: StreamParser (Token s) ()
+  parseSpecials = pure ()
+
+  -- | 'activate' tries to run a parser on the current input. If the
+  -- parser doesn't apply, it consumes nothing and returns empty. If
+  -- it does apply, it consumes the relevant input and returns a
+  -- result.
+  activate :: s r -> StreamParser (Token s) r
+
+  -- | Render human-readable usage information for a particular
+  -- parser.
+  usageInfo :: s r -> Builder
 
 --------------------------------------------------------------------------------
 
