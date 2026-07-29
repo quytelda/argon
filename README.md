@@ -20,6 +20,18 @@ Mangrove has a test suite using HSpec. Run `stack test` to build and
 run the tests. The `main` branch should always pass all tests, so if
 something fails, please make an issue!
 
+## Project Roadmap
+
+This project is currently under active development. Goals currently on
+the horizon include:
+
+- Stabilize the client-facing API
+- Simplify the code structure
+- Improve test suite coverage
+- Profiling & optimization
+
+Once these are addressed, a 1.0.0 release will be appropriate.
+
 # Tutorial
 
 ## A Metaphor
