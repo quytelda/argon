@@ -50,7 +50,6 @@ import           Mangrove.Resolve
 import           Mangrove.Scheme.Sub     (SubScheme)
 import qualified Mangrove.Scheme.Sub     as Sub
 import           Mangrove.Separable
-import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.TextParser
 import           Mangrove.Valency
