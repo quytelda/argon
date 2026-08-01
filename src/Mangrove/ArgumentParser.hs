@@ -17,7 +17,6 @@ import           Data.Text          (Text)
 
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
-import           Mangrove.Stream
 import           Mangrove.Text
 
 -- | Represents the final result of a parsing operation. Each

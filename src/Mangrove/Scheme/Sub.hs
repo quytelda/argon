@@ -27,7 +27,6 @@ import           Data.Text           (Text)
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
 import           Mangrove.Separable
-import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.TextParser
 import           Mangrove.Valency

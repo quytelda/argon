@@ -47,7 +47,6 @@ import           Mangrove.Scheme.Sub     (SubParser)
 import qualified Mangrove.Scheme.Sub     as Sub
 import           Mangrove.Scheme.Unix
 import           Mangrove.Separable
-import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.TextParser
 
