@@ -46,7 +46,7 @@ runArgumentParser tree args =
 runArgumentParser'
   :: Scheme s
   => ParseTree s r
-  -> StreamState (Token s)
+  -> StreamState s
   -> Result (Token s) r
 runArgumentParser' tree =
   runStreamParser (satiate tree) handler

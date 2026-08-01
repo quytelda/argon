@@ -257,14 +257,14 @@ class (Functor s, Resolve s) => Scheme (s :: Type -> Type) where
   -- | Parse special control arguments that don't represent tokens in
   -- the scheme, but control aspects of how parsing proceeds (e.g.
   -- escaping).
-  parseSpecials :: StreamParser (Token s) ()
+  parseSpecials :: StreamParser s ()
   parseSpecials = pure ()
 
   -- | 'activate' tries to run a parser on the current input. If the
   -- parser doesn't apply, it consumes nothing and returns empty. If
   -- it does apply, it consumes the relevant input and returns a
   -- result.
-  activate :: s r -> StreamParser (Token s) r
+  activate :: s r -> StreamParser s r
 
   -- | Render human-readable usage information for a particular
   -- parser.
@@ -287,52 +287,52 @@ class (Functor s, Resolve s) => Scheme (s :: Type -> Type) where
 -- example, in the Unix scheme, escaping forces all subsequent
 -- arguments to be interpreted as positional arguments, even if they
 -- would normally be interpreted as options or commands.
-data StreamState tok = StreamState
-  { streamContent :: [Text] -- ^ A sequence of 'Text' values
-  , streamContext :: [tok]  -- ^ A stack representing current parsing context
-  , streamEscaped :: Bool   -- ^ Escaped mode
-  } deriving (Eq, Show)
+data StreamState s = StreamState
+  { streamContent :: [Text]    -- ^ A sequence of 'Text' values
+  , streamContext :: [Token s] -- ^ A stack representing current parsing context
+  , streamEscaped :: Bool      -- ^ Escaped mode
+  }
 
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.
-data StreamHandler tok a r = StreamHandler
-  { onSuccess     :: StreamState tok -> a -> r -- ^ Success Continuation
-  , onEmpty       :: StreamState tok -> r -- ^ Empty continuation
-  , onFailure     :: StreamState tok -> Builder -> r -- ^ Failure Continuation
-  , onHelpRequest :: StreamState tok -> r -- ^ Help Continuation
+data StreamHandler s a r = StreamHandler
+  { onSuccess     :: StreamState s -> a -> r -- ^ Success Continuation
+  , onEmpty       :: StreamState s -> r -- ^ Empty continuation
+  , onFailure     :: StreamState s -> Builder -> r -- ^ Failure Continuation
+  , onHelpRequest :: StreamState s -> r -- ^ Help Continuation
   } deriving (Functor)
 
 -- | The amazing stream parsing monad! This monad tracks the stream
 -- state and context. It short-circuits when exceptions or
 -- help-requests are raised.
-newtype StreamParser tok a = StreamParser
+newtype StreamParser s a = StreamParser
   { runStreamParser
-    :: forall r. StreamHandler tok a r
-    -> StreamState tok
+    :: forall r. StreamHandler s a r
+    -> StreamState s
     -> r
   }
 
-instance Functor (StreamParser tok) where
+instance Functor (StreamParser s) where
   fmap f parser = StreamParser $ \handler ->
     runStreamParser parser handler { onSuccess = \s -> onSuccess handler s . f }
 
-instance Applicative (StreamParser tok) where
+instance Applicative (StreamParser s) where
   pure a = StreamParser $ \handler state -> onSuccess handler state a
   mf <*> ma = StreamParser $ \handler ->
     runStreamParser mf
     handler { onSuccess = \s f -> runStreamParser ma handler { onSuccess = \s' -> onSuccess handler s' . f } s }
 
-instance Alternative (StreamParser tok) where
+instance Alternative (StreamParser s) where
   empty = StreamParser $ \handler -> onEmpty handler
   l <|> r = StreamParser $ \handler ->
     runStreamParser l handler { onEmpty = runStreamParser r handler }
 
-instance Monad (StreamParser tok) where
+instance Monad (StreamParser s) where
   return = pure
   ma >>= f = StreamParser $ \handler ->
     runStreamParser ma handler { onSuccess = \s a -> runStreamParser (f a) handler s }
 
-instance MonadError Builder (StreamParser tok) where
+instance MonadError Builder (StreamParser s) where
   throwError err = StreamParser $ \handler state -> onFailure handler state err
   catchError ma recover = StreamParser $ \handler state ->
     runStreamParser ma
@@ -345,33 +345,33 @@ instance MonadError Builder (StreamParser tok) where
 -- forces all subsequent arguments to be interpreted as positional
 -- arguments, even if they would normally be interpreted as options or
 -- commands.
-setEscaped :: Bool -> StreamParser tok ()
+setEscaped :: Bool -> StreamParser s ()
 setEscaped b = StreamParser $ \handler state ->
   onSuccess handler state { streamEscaped = b } ()
 
 -- | Check whether escaped parsing is enabled.
-getEscaped :: StreamParser tok Bool
+getEscaped :: StreamParser s Bool
 getEscaped = StreamParser $ \handler state ->
   onSuccess handler state (streamEscaped state)
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: StreamParser tok a
+requestHelp :: StreamParser s a
 requestHelp = StreamParser onHelpRequest
 
 -- | Get a list representing the current context stack.
-getContext :: StreamParser tok [tok]
+getContext :: StreamParser s [Token s]
 getContext = StreamParser $ \handler state ->
   onSuccess handler state (streamContext state)
 
 -- | Replace the context stack.
-setContext :: [tok] -> StreamParser tok ()
+setContext :: [Token s] -> StreamParser s ()
 setContext contexts = StreamParser $ \handler state ->
   onSuccess handler state { streamContext = contexts } ()
 
 -- | Push the provided token onto the context stack, then perform some
 -- computation. Afterwards, the stack is restored to its prior state.
-withContext :: tok -> StreamParser tok a -> StreamParser tok a
+withContext :: Token s -> StreamParser s a -> StreamParser s a
 withContext context action = do
   oldContext <- getContext
   setContext $ context : oldContext
@@ -388,14 +388,14 @@ renderError contexts err =
 --------------------------------------------------------------------------------
 
 -- | Remove and return the first token in the stream.
-popMaybe :: StreamParser tok (Maybe Text)
+popMaybe :: StreamParser s (Maybe Text)
 popMaybe = StreamParser $ \handler state ->
   case streamContent state of
     (t:ts') -> onSuccess handler state { streamContent = ts' } (Just t)
     _       -> onSuccess handler state Nothing
 
 -- | View the first token in the stream without consuming it.
-peekMaybe :: StreamParser tok (Maybe Text)
+peekMaybe :: StreamParser s (Maybe Text)
 peekMaybe = StreamParser $ \handler state ->
   case streamContent state of
     (t:_) -> onSuccess handler state (Just t)
@@ -403,7 +403,7 @@ peekMaybe = StreamParser $ \handler state ->
 
 -- | Remove and return the first token in the stream. Evaluates to
 -- 'empty' if there are no tokens in the stream.
-pop :: StreamParser tok Text
+pop :: StreamParser s Text
 pop = StreamParser $ \handler state ->
   case streamContent state of
     (t:ts') -> onSuccess handler state { streamContent = ts' } t
@@ -411,14 +411,14 @@ pop = StreamParser $ \handler state ->
 
 -- | View the first token in the stream without consuming it.
 -- Evaluates to 'empty' if there are no tokens in the stream.
-peek :: StreamParser tok Text
+peek :: StreamParser s Text
 peek = StreamParser $ \handler state ->
   case streamContent state of
     (t:_) -> onSuccess handler state t
     _     -> onEmpty handler state
 
 -- | Prepend a token to the front of the stream.
-push :: Text -> StreamParser tok ()
+push :: Text -> StreamParser s ()
 push t = StreamParser $ \handler state ->
   onSuccess handler
   state { streamContent = t : streamContent state }
@@ -426,7 +426,7 @@ push t = StreamParser $ \handler state ->
 
 -- | Discard the first token in the stream. Nothing happens if there
 -- are no tokens in the stream.
-pop_ :: StreamParser tok ()
+pop_ :: StreamParser s ()
 pop_ = StreamParser $ \handler state ->
   onSuccess handler
   state { streamContent = drop 1 $ streamContent state }
@@ -437,7 +437,7 @@ pop_ = StreamParser $ \handler state ->
 -- | 'feed' traverses the tree until it activates a parser that
 -- consumes input. When a subtree successfully consumes input, it is
 -- replaced with an updated subtree and the traversal ceases.
-feed :: Scheme s => ParseTree s r -> StreamParser (Token s) (ParseTree s r)
+feed :: Scheme s => ParseTree s r -> StreamParser s (ParseTree s r)
 feed EmptyNode = empty
 feed (ValueNode _) = empty
 feed (ParseNode parser) = ValueNode <$> activate parser
@@ -453,7 +453,7 @@ feed (ManyNode _ tree) =
 -- | Repeatedly traverse the tree, each time activating the first
 -- parser that can consume available input, until no more input can be
 -- consumed.
-satiate :: Scheme s => ParseTree s r -> StreamParser (Token s) (ParseTree s r)
+satiate :: Scheme s => ParseTree s r -> StreamParser s (ParseTree s r)
 satiate tree = do
   parseSpecials
   result <- optional $ feed tree
