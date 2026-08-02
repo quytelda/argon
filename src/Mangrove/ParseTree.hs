@@ -317,6 +317,21 @@ data StreamState s = StreamState
   , streamEscaped :: Bool      -- ^ Escaped mode
   }
 
+class StreamCapability (cap :: HelpCapability) where
+  data HelpHandler cap (s :: Type -> Type) r
+  mapHelpHandler :: (a -> b) -> HelpHandler cap s a -> HelpHandler cap s b
+
+instance StreamCapability 'Silent where
+  data HelpHandler 'Silent s r = NoHandler
+  mapHelpHandler _ _ = NoHandler
+
+instance StreamCapability 'Helpful where
+  data HelpHandler 'Helpful s r = Handler (StreamState s -> r)
+  mapHelpHandler f (Handler h) = Handler $ f . h
+
+instance StreamCapability cap => Functor (HelpHandler cap s) where
+  fmap f h = mapHelpHandler f h
+
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.
 data StreamHandler s a r = StreamHandler
