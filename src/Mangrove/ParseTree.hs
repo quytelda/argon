@@ -45,6 +45,9 @@ module Mangrove.ParseTree
 
     -- * Stream Parser
   , StreamParser(..)
+  , StreamCapability(..)
+  , HelpContinuation(..)
+  , HelpHandler
   , StreamHandler(..)
   , StreamState(..)
 
@@ -317,14 +320,31 @@ data StreamState s = StreamState
   , streamEscaped :: Bool      -- ^ Escaped mode
   }
 
+class StreamCapability (cap :: HelpCapability) where
+  data HelpContinuation cap (s :: Type -> Type) r
+  mapHelpHandler :: (a -> b) -> HelpContinuation cap s a -> HelpContinuation cap s b
+
+instance StreamCapability 'Silent where
+  data HelpContinuation 'Silent s r = NoHelp
+  mapHelpHandler _ _ = NoHelp
+
+instance StreamCapability 'Helpful where
+  data HelpContinuation 'Helpful s r = OnHelp (StreamState s -> r)
+  mapHelpHandler f (OnHelp h) = OnHelp $ f . h
+
+instance StreamCapability cap => Functor (HelpContinuation cap s) where
+  fmap f h = mapHelpHandler f h
+
+type HelpHandler s r = HelpContinuation (HelpSupport s) s r
+
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.
 data StreamHandler s a r = StreamHandler
   { onSuccess     :: StreamState s -> a -> r -- ^ Success Continuation
   , onEmpty       :: StreamState s -> r -- ^ Empty continuation
   , onFailure     :: StreamState s -> Builder -> r -- ^ Failure Continuation
-  , onHelpRequest :: StreamState s -> r -- ^ Help Continuation
-  } deriving (Functor)
+  , onHelpRequest :: HelpHandler s r -- ^ Help Continuation
+  }
 
 -- | The amazing stream parsing monad! This monad tracks the stream
 -- state and context. It short-circuits when exceptions or
@@ -380,8 +400,10 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: StreamParser s a
-requestHelp = StreamParser onHelpRequest
+requestHelp :: SupportsHelp s => StreamParser s a
+requestHelp = StreamParser $ \handler state ->
+  case onHelpRequest handler of
+    OnHelp h -> h state
 
 -- | Get a list representing the current context stack.
 getContext :: StreamParser s [Token s]
