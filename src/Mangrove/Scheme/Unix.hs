@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE DeriveFunctor     #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase        #-}
@@ -169,6 +170,8 @@ instance Scheme UnixScheme where
     | UnixOption Flag (Maybe Text)
     deriving (Eq, Show)
 
+  type HelpSupport UnixScheme = 'Helpful
+
   delimiter _ = ' '
 
   parseSpecials = do
@@ -301,6 +304,16 @@ instance Render (Token UnixScheme) where
   render (UnixOption f Nothing)                = render f
   render (UnixOption f@(LongFlag _) (Just v))  = render f <> "=" <> render v
   render (UnixOption f@(ShortFlag _) (Just v)) = render f <> render v
+
+instance SupportsHelp UnixScheme where
+  makeHelpInfo tree context name desc = renderText
+    $ "Usage:\n"
+    <> renderUsages tree <> "\n"
+    <> render desc <> "\n"
+    <> renderHelp tree context
+    where
+      renderUsageLine s = render name <> " " <> render s <> "\n"
+      renderUsages = foldMap renderUsageLine . exhibitToList . separate
 
 -- | Convenient type alias for Unix-flavored parse trees.
 type UnixParser = ParseTree UnixScheme
