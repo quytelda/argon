@@ -221,10 +221,10 @@ instance Scheme UnixScheme where
           , streamEscaped = not $ Sub.hasSubOptions subtree
           }
         parseSubargs args =
-          case runArgumentParser' subtree (initState args) of
-            Success leftover result -> pure (leftover, result)
-            Failure contexts err    -> throwError $ renderError contexts err
-            HelpRequest _           -> requestHelp
+          runArgumentParser' subtree (initState args)
+          (curry pure)
+          (throwError . render)
+          NoHelp
 
     withContext (UnixOption flag mbound) $ do
       -- If a bound argument (e.g. --floop=blah) is provided, we
