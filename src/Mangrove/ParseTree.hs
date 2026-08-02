@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds                 #-}
 {-# LANGUAGE DeriveFunctor             #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts          #-}
@@ -254,6 +255,12 @@ class (Functor s, Resolve s) => Scheme (s :: Type -> Type) where
   -- | A token represents a particular interpretation of an argument
   -- string under this parsing scheme.
   data Token s
+
+  -- | This type indicates whether a parsing scheme supports help
+  -- output. It is 'Silent' by default, and is intended to be
+  -- overriden by subclasses.
+  type HelpSupport s :: HelpCapability
+  type HelpSupport s = 'Silent
 
   -- | 'delimiter' is the character that separates argument strings in
   -- combined string representation. For example, arguments in the CLI
