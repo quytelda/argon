@@ -10,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE TypeOperators             #-}
 
 {-|
 Module      : Mangrove.ParseTree
@@ -40,6 +41,7 @@ module Mangrove.ParseTree
     -- * Parsing Schemes
   , HelpCapability(..)
   , Scheme(..)
+  , SupportsHelp(..)
 
     -- * Stream Parser
   , StreamParser(..)
@@ -257,8 +259,10 @@ class (Functor s, Resolve s) => Scheme (s :: Type -> Type) where
   data Token s
 
   -- | This type indicates whether a parsing scheme supports help
-  -- output. It is 'Silent' by default, and is intended to be
-  -- overriden by subclasses.
+  -- output.
+  --
+  -- It is 'Silent' by default, but must be set to 'Helpful' if the
+  -- scheme will implement an instance of 'SupportsHelp'.
   type HelpSupport s :: HelpCapability
   type HelpSupport s = 'Silent
 
@@ -282,6 +286,13 @@ class (Functor s, Resolve s) => Scheme (s :: Type -> Type) where
   -- | Render human-readable usage information for a particular
   -- parser.
   usageInfo :: s r -> Builder
+
+-- | A class for schemes that support human-readable help output.
+--
+-- NOTE: In order to define a 'SupportsHelp' instance for some @Scheme
+-- s@, @HelpSupport s@ must be set to 'Helpful'.
+class (Scheme s, HelpSupport s ~ 'Helpful) => SupportsHelp s where
+  makeHelpInfo :: ParseTree s r -> [Token s] -> Text -> Text -> Text
 
 --------------------------------------------------------------------------------
 -- Stream Parser
