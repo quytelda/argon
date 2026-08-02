@@ -338,8 +338,8 @@ data StreamHandler s a r = StreamHandler
   { onSuccess     :: StreamState s -> a -> r -- ^ Success Continuation
   , onEmpty       :: StreamState s -> r -- ^ Empty continuation
   , onFailure     :: StreamState s -> Builder -> r -- ^ Failure Continuation
-  , onHelpRequest :: StreamState s -> r -- ^ Help Continuation
-  } deriving (Functor)
+  , onHelpRequest :: HelpHandler (HelpSupport s) s r -- ^ Help Continuation
+  }
 
 -- | The amazing stream parsing monad! This monad tracks the stream
 -- state and context. It short-circuits when exceptions or
@@ -395,8 +395,10 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: StreamParser s a
-requestHelp = StreamParser onHelpRequest
+requestHelp :: SupportsHelp s => StreamParser s a
+requestHelp = StreamParser $ \handler state ->
+  case onHelpRequest handler of
+    Handler h -> h state
 
 -- | Get a list representing the current context stack.
 getContext :: StreamParser s [Token s]
