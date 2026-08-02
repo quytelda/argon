@@ -37,6 +37,7 @@ import           Control.Applicative
 import           Data.List.NonEmpty      (NonEmpty)
 import           Data.Text               (Text)
 import qualified Data.Text               as T
+import qualified Data.Text.IO            as TIO
 import           System.Environment
 import           System.Exit
 import           System.IO
@@ -46,7 +47,6 @@ import           Mangrove.ParseTree
 import           Mangrove.Scheme.Sub     (SubParser)
 import qualified Mangrove.Scheme.Sub     as Sub
 import           Mangrove.Scheme.Unix
-import           Mangrove.Separable
 import           Mangrove.Text
 import           Mangrove.TextParser
 
@@ -64,24 +64,21 @@ parseArguments
   -> IO a
 parseArguments tree name description action = do
   args <- map T.pack <$> getArgs
-  case runArgumentParser tree args of
-    Success [] result -> action result
-    Success (token:_) _ -> do
+  runArgumentParser tree args
+    _onSuccess
+    _onFailure
+    (OnHelp _onHelp)
+  where
+    _onSuccess [] result = action result
+    _onSuccess (token:_) _ = do
       hPutBuilder stderr $ "unexpected " <> render token <> "\n"
       exitFailure
-    Failure contexts err -> do
-      hPutBuilder stderr $ renderError contexts err <> "\n"
+    _onFailure err = do
+      TIO.hPutStrLn stderr err
       exitFailure
-    HelpRequest contexts -> do
-      putBuilder
-        $ "Usage:\n"
-        <> renderUsages tree <> "\n"
-        <> render description <> "\n"
-        <> renderHelp tree contexts
+    _onHelp state = do
+      TIO.putStr $ makeHelpInfo tree (streamContext state) name description
       exitSuccess
-  where
-    renderUsageLine s = render name <> " " <> render s <> "\n"
-    renderUsages = foldMap renderUsageLine . exhibitToList . separate
 
 --------------------------------------------------------------------------------
 -- Tree-building Combinators
