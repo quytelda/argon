@@ -37,6 +37,7 @@ module Mangrove.ParseTree
   , isChoice
 
     -- * Parsing Schemes
+  , HelpCapability(..)
   , Scheme(..)
 
     -- * Stream Parser
@@ -241,6 +242,11 @@ instance Separable s => Separable (ParseTree s) where
 
 --------------------------------------------------------------------------------
 -- Parsing Schemes
+
+-- | A marker that distinguishes "silent" schemes (which produce no
+-- help output) from "helpful" schemes, which support the production
+-- of help output.
+data HelpCapability = Silent | Helpful
 
 -- | A scheme is a system of parsers and tokens. It parses a sequence
 -- of arguments into tokens and values.
