@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PolymorphicComponents     #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
+{-# LANGUAGE StandaloneDeriving        #-}
 {-# LANGUAGE TypeApplications          #-}
 {-# LANGUAGE TypeFamilies              #-}
 {-# LANGUAGE TypeOperators             #-}
@@ -256,7 +257,7 @@ data HelpCapability = Silent | Helpful
 
 -- | A scheme is a system of parsers and tokens. It parses a sequence
 -- of arguments into tokens and values.
-class (Functor s, Resolve s, Render (Token s)) => Scheme (s :: Type -> Type) where
+class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => Scheme (s :: Type -> Type) where
   -- | A token represents a particular interpretation of an argument
   -- string under this parsing scheme.
   data Token s
@@ -319,6 +320,9 @@ data StreamState s = StreamState
   , streamContext :: [Token s] -- ^ A stack representing current parsing context
   , streamEscaped :: Bool      -- ^ Escaped mode
   }
+
+deriving instance Scheme s => Show (StreamState s)
+deriving instance Scheme s => Eq (StreamState s)
 
 class StreamCapability (cap :: HelpCapability) where
   data HelpContinuation cap (s :: Type -> Type) r
