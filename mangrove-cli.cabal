@@ -58,7 +58,6 @@ test-suite mangrove-cli-test
   other-modules:
       General
       Mangrove.ParseTreeSpec
-      Mangrove.StreamSpec
       Spec
       TestParsers
       Paths_mangrove_cli
