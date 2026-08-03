@@ -1,15 +1,31 @@
+{-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeOperators     #-}
 
 {-|
 Module      : Mangrove.ArgumentParser
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
-A complete (but generic) argument parsing interface.
+This module contains an API (types and functions) for running argument parsers.
 -}
 module Mangrove.ArgumentParser
-  ( runArgumentParser
+  ( -- * Types
+    ProgramInfo(..)
+  , Result(..)
+
+    -- * Silent Parsers
+  , runSilentParser
+  , runSilentParser'
+
+    -- * Helpful Parsers
+  , runHelpfulParser
+  , runHelpfulParser'
+
+    -- * Generic Parsers
+  , runArgumentParser
   , runArgumentParser'
   ) where
 
@@ -18,6 +34,69 @@ import           Data.Text          (Text)
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
 import           Mangrove.Text
+
+-- | Program metadata for displaying help output.
+data ProgramInfo = ProgramInfo
+  { programName :: !Text -- ^ The program name
+  , programDesc :: !Text -- ^ A description of the program
+  } deriving (Show)
+
+-- | The results of a parsing operation.
+--
+-- Only parsing schemes that support generating help output will yield
+-- 'Help' values.
+data Result s r where
+  Success :: ![Text] -> !r -> Result s r
+  Failure :: !Text -> Result s r
+  Help :: SupportsHelp s => !Text -> Result s r
+
+-- | Create a default initial 'StreamState' from a list of arguments.
+argsToState :: [Text] -> StreamState s
+argsToState args = StreamState args [] False
+
+-- | Attempt to parse a value of type @r@ from a list of arguments,
+-- where the parser @ParseTree s r@ doesn't support help output.
+runSilentParser
+  :: (Scheme s, HelpSupport s ~ 'Silent)
+  => ParseTree s r
+  -> [Text] -- ^ Input arguments
+  -> Result s r
+runSilentParser tree = runSilentParser' tree . argsToState
+
+-- | A more general form of 'runSilentParser' that accepts a custom
+-- 'StreamState' as the starting state.
+
+runSilentParser'
+  :: (Scheme s, HelpSupport s ~ 'Silent)
+  => ParseTree s r
+  -> StreamState s
+  -> Result s r
+runSilentParser' tree state =
+  runArgumentParser' tree state Success Failure NoHelp
+
+-- | Attempt to parse a value of type @r@ from a list of arguments,
+-- where the parser @ParseTree s r@ supports help output.
+runHelpfulParser
+  :: SupportsHelp s
+  => ProgramInfo
+  -> ParseTree s r
+  -> [Text]
+  -> Result s r
+runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
+
+-- | A more general form of 'runHelpfulParser' that accepts a custom
+-- 'StreamState' as the starting state.
+runHelpfulParser'
+  :: SupportsHelp s
+  => ProgramInfo
+  -> ParseTree s r
+  -> StreamState s
+  -> Result s r
+runHelpfulParser' info tree state =
+  runArgumentParser' tree state Success Failure (OnHelp _onHelpRequest)
+  where
+    _onHelpRequest state' =
+      Help $ makeHelpInfo tree (streamContext state') (programName info) (programDesc info)
 
 -- | Satiate a 'ParseTree' with all the input it can consume, then
 -- attempt to evaluate it.
