@@ -6,6 +6,7 @@ module Mangrove.ParseTreeSpec (spec) where
 
 import           Control.Applicative
 import           Data.Text               (Text)
+import           Data.Text.Lazy.Builder
 import           Test.Hspec
 
 import           Mangrove.ArgumentParser
@@ -16,6 +17,11 @@ import           TestParsers
 
 spec :: Spec
 spec = do
+  spec_ParseTree
+  spec_StreamParser
+
+spec_ParseTree :: Spec
+spec_ParseTree = do
   describe "pure" $ do
     it "resolves to the given value" $ do
       runHelpfulParser_ (ValueNode 'a' :: ParseTree UnixScheme Char) []
@@ -106,3 +112,68 @@ spec = do
     it "parses zero instances" $ do
       runHelpfulParser_ (optional opt_e_param) ["blah"]
         `shouldBe` Success ["blah"] Nothing
+
+--------------------------------------------------------------------------------
+-- Stream Parser Monad
+
+data StreamResult r
+  = SSuccess r
+  | SEmpty
+  | SFailure Builder
+  | SHelpReq
+  deriving (Eq, Show)
+
+-- | Sink the results of a 'StreamParser' into a data type for easier inspection.
+runStreamParser'
+  :: SupportsHelp s
+  => StreamParser s r
+  -> StreamState s
+  -> (StreamState s, StreamResult r)
+runStreamParser' parser state =
+  runStreamParser parser handler state
+  where
+    handler = StreamHandler
+      { onSuccess = \s result -> (s, SSuccess result)
+      , onEmpty = \s -> (s, SEmpty)
+      , onFailure = \s err -> (s, SFailure err)
+      , onHelpRequest = OnHelp $ \s -> (s, SHelpReq)
+      }
+
+initState_empty :: StreamState s
+initState_empty = StreamState [] [] False
+
+initState_singleton :: StreamState s
+initState_singleton = StreamState ["asdf"] [] False
+
+spec_StreamParser :: Spec
+spec_StreamParser = do
+  describe "peek" $ do
+    context "when the stream is empty" $ do
+      let (finalState, result) = runStreamParser' peek (initState_empty @UnixScheme)
+      it "returns empty" $ do
+        result `shouldBe` SEmpty
+      it "preserves the state" $ do
+        initState_empty `shouldBe` finalState
+
+    context "when the stream is not empty" $ do
+      let (finalState, result) = runStreamParser' peek (initState_singleton @UnixScheme)
+      it "gets the first item" $ do
+        result `shouldBe` SSuccess "asdf"
+      it "preserves the state" $ do
+        initState_singleton `shouldBe` finalState
+
+  describe "pop" $ do
+    context "when the stream is empty" $ do
+      let (finalState, result) = runStreamParser' pop (initState_empty @UnixScheme)
+      it "returns empty" $ do
+        result `shouldBe` SEmpty
+      it "preserves the state" $ do
+        initState_empty `shouldBe` finalState
+
+    context "when the stream is not empty" $ do
+      let (finalState, result) = runStreamParser' pop (initState_singleton @UnixScheme)
+      it "gets the first item without replacement" $ do
+        result `shouldBe` SSuccess "asdf"
+        streamContent finalState `shouldBe` tail (streamContent initState_singleton)
+      it "preserves the context" $ do
+        streamContext initState_singleton `shouldBe` streamContext finalState
