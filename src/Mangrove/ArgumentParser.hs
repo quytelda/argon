@@ -23,6 +23,7 @@ module Mangrove.ArgumentParser
     -- * Helpful Parsers
   , runHelpfulParser
   , runHelpfulParser'
+  , runHelpfulParser_
 
     -- * Generic Parsers
   , runArgumentParser
@@ -97,6 +98,19 @@ runHelpfulParser' info tree state =
   where
     _onHelpRequest state' =
       Help $ makeHelpInfo tree (streamContext state') (programName info) (programDesc info)
+
+-- | A variant of 'runHelpfulParser' that treats help requests as
+-- failures.
+runHelpfulParser_
+  :: SupportsHelp s
+  => ParseTree s r
+  -> [Text]
+  -> Result s r
+runHelpfulParser_ tree args =
+  runArgumentParser' tree (argsToState args) Success Failure (OnHelp _onHelpRequest)
+  where
+    _onHelpRequest state' = Failure $ renderText $
+      renderError (streamContext state') "help requested"
 
 -- | Satiate a 'ParseTree' with all the input it can consume, then
 -- attempt to evaluate it.
