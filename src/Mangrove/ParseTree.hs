@@ -400,7 +400,7 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: SupportsHelp s => StreamParser s a
+requestHelp :: HelpSupport s ~ 'Helpful => StreamParser s a
 requestHelp = StreamParser $ \handler state ->
   case onHelpRequest handler of
     OnHelp h -> h state
