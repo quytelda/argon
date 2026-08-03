@@ -1,8 +1,9 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeOperators     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE FlexibleContexts   #-}
+{-# LANGUAGE GADTs              #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeOperators      #-}
 
 {-|
 Module      : Mangrove.ArgumentParser
@@ -50,6 +51,9 @@ data Result s r where
   Success :: ![Text] -> !r -> Result s r
   Failure :: !Text -> Result s r
   Help :: SupportsHelp s => !Text -> Result s r
+
+deriving instance Show r => Show (Result s r)
+deriving instance Eq r => Eq (Result s r)
 
 -- | Create a default initial 'StreamState' from a list of arguments.
 argsToState :: [Text] -> StreamState s
