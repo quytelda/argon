@@ -22,6 +22,7 @@ module Mangrove.ArgumentParser
   , runSilentParser'
 
     -- * Helpful Parsers
+  , parseArguments
   , runHelpfulParser
   , runHelpfulParser'
   , runHelpfulParser_
@@ -31,7 +32,13 @@ module Mangrove.ArgumentParser
   , runArgumentParser'
   ) where
 
-import           Data.Text          (Text)
+import           Data.Text           (Text)
+import qualified Data.Text           as T
+import qualified Data.Text.IO        as TIO
+import           System.Environment
+import           System.Exit
+import           System.IO
+
 
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
@@ -115,6 +122,32 @@ runHelpfulParser_ tree args =
   where
     _onHelpRequest state' = Failure $ renderText $
       renderError (streamContext state') "help requested"
+
+-- | Parse the command line arguments passed to the program, then
+-- invoke the program's entrypoint with the results of the parsing. If
+-- parsing fails, we instead display an error to stderr and exit.
+-- Alternatively, if help was requested, we abandon parsing and print
+-- the relevant help output to stdout, then exit without indicating an
+-- error.
+parseArguments
+  :: SupportsHelp s
+  => ParseTree s r
+  -> ProgramInfo
+  -> (r -> IO a) -- ^ Program Entrypoint
+  -> IO a
+parseArguments tree info action = do
+  args <- map T.pack <$> getArgs
+  case runHelpfulParser info tree args of
+    Success [] result -> action result
+    Success (token:_) _ -> do
+      hPutBuilder stderr $ "unexpected " <> render token <> "\n"
+      exitFailure
+    Failure err -> do
+      TIO.hPutStrLn stderr err
+      exitFailure
+    Help output -> do
+      TIO.putStr output
+      exitSuccess
 
 -- | Satiate a 'ParseTree' with all the input it can consume, then
 -- attempt to evaluate it.

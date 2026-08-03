@@ -15,9 +15,6 @@ module Mangrove.Unix
     UnixParser
   , SubParser
 
-    -- * Running Parsers
-  , parseArguments
-
     -- * Tree-building Combinators
   , parameter
   , option
@@ -34,51 +31,14 @@ module Mangrove.Unix
   ) where
 
 import           Control.Applicative
-import           Data.List.NonEmpty      (NonEmpty)
-import           Data.Text               (Text)
-import qualified Data.Text               as T
-import qualified Data.Text.IO            as TIO
-import           System.Environment
-import           System.Exit
-import           System.IO
+import           Data.List.NonEmpty   (NonEmpty)
+import           Data.Text            (Text)
 
-import           Mangrove.ArgumentParser
 import           Mangrove.ParseTree
-import           Mangrove.Scheme.Sub     (SubParser)
-import qualified Mangrove.Scheme.Sub     as Sub
+import           Mangrove.Scheme.Sub  (SubParser)
+import qualified Mangrove.Scheme.Sub  as Sub
 import           Mangrove.Scheme.Unix
-import           Mangrove.Text
 import           Mangrove.TextParser
-
--- | Parse the command line arguments passed to the program, then
--- invoke the program's entrypoint with the results of the parsing. If
--- parsing fails, we instead display an error to stderr and exit.
--- Alternatively, if help was requested, we abandon parsing and print
--- the relevant help output to stdout, then exit without indicating an
--- error.
-parseArguments
-  :: UnixParser r
-  -> Text -- ^ Program Name
-  -> Text -- ^ Program Description
-  -> (r -> IO a) -- ^ Program Entrypoint
-  -> IO a
-parseArguments tree name description action = do
-  args <- map T.pack <$> getArgs
-  runArgumentParser tree args
-    _onSuccess
-    _onFailure
-    (OnHelp _onHelp)
-  where
-    _onSuccess [] result = action result
-    _onSuccess (token:_) _ = do
-      hPutBuilder stderr $ "unexpected " <> render token <> "\n"
-      exitFailure
-    _onFailure err = do
-      TIO.hPutStrLn stderr err
-      exitFailure
-    _onHelp state = do
-      TIO.putStr $ makeHelpInfo tree (streamContext state) name description
-      exitSuccess
 
 --------------------------------------------------------------------------------
 -- Tree-building Combinators
