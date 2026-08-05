@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 
-module Mangrove.ParseTreeSpec (spec) where
+module Mangrove.ParserSpec (spec) where
 
 import           Control.Applicative
 import           Data.Text               (Text)
@@ -10,7 +10,7 @@ import           Data.Text.Lazy.Builder
 import           Test.Hspec
 
 import           Mangrove.ArgumentParser
-import           Mangrove.ParseTree
+import           Mangrove.Parser
 import           Mangrove.Scheme.Unix
 
 import           TestParsers
