@@ -322,24 +322,19 @@ data StreamState s = StreamState
 deriving instance Scheme s => Show (StreamState s)
 deriving instance Scheme s => Eq (StreamState s)
 
-class StreamCapability (cap :: HelpCapability) where
-  -- | A handler for when help is requested.
-  --
-  -- This will hold a continuation function for helpful parsing
-  -- schemes, or a placeholder value for silent schemes.
-  data HelpContinuation cap (s :: Type -> Type) r
-  mapHelpHandler :: (a -> b) -> HelpContinuation cap s a -> HelpContinuation cap s b
+-- | A handler for when help is requested.
+--
+-- This will hold a continuation function for helpful parsing
+-- schemes, or a placeholder value for silent schemes.
+data family HelpContinuation (cap :: HelpCapability) (s :: Type -> Type) r
 
-instance StreamCapability 'Silent where
-  data HelpContinuation 'Silent s r = NoHelp
-  mapHelpHandler _ _ = NoHelp
+data instance HelpContinuation 'Silent s r
+  = NoHelp
+  deriving (Functor)
 
-instance StreamCapability 'Helpful where
-  data HelpContinuation 'Helpful s r = OnHelp (StreamState s -> r)
-  mapHelpHandler f (OnHelp h) = OnHelp $ f . h
-
-instance StreamCapability cap => Functor (HelpContinuation cap s) where
-  fmap f h = mapHelpHandler f h
+data instance HelpContinuation 'Helpful s r
+  = OnHelp (StreamState s -> r)
+  deriving (Functor)
 
 -- | A handler for when help is requested.
 --
