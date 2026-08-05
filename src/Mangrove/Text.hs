@@ -74,15 +74,23 @@ hPutBuilder handle = TLIO.hPutStr handle . TLB.toLazyText
 --------------------------------------------------------------------------------
 -- Combinators
 
+-- | @between open close s@ surrounds @s@ with @open@ and @close@
+-- (i.e. @open <> s <> close@).
 between :: Monoid m => m -> m -> m -> m
 between open close s = open <> s <> close
 
+-- | Surround a string with square brackets.
 brackets :: Builder -> Builder
 brackets = between "[" "]"
 
+-- | Surround a string with curly braces.
 braces :: Builder -> Builder
 braces = between "{" "}"
 
+-- | @renderDelimitedIf wrap f x@ will render @x@ as a 'Builder'. If
+-- the condition @f x@ is @True@, the result will be modified using
+-- the function @wrap@, otherwise the result will be returned
+-- unmodified.
 renderDelimitedIf :: Render a => (Builder -> Builder) -> (a -> Bool) -> a -> Builder
 renderDelimitedIf wrap f x = (if f x then wrap else id) (render x)
 

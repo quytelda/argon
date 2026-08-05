@@ -13,21 +13,23 @@ License     : BSD-3-Clause
 This module contains an API (types and functions) for running argument parsers.
 -}
 module Mangrove
-  ( -- * Types
-    ProgramInfo(..)
+  ( -- * Standard Interface
+    parseArguments
+
+    -- * Pure Interface
+  , ProgramInfo(..)
   , Result(..)
 
-    -- * Silent Parsers
+    -- ** Silent Parsers
   , runSilentParser
   , runSilentParser'
 
-    -- * Helpful Parsers
-  , parseArguments
+    -- ** Helpful Parsers
   , runHelpfulParser
   , runHelpfulParser'
   , runHelpfulParser_
 
-    -- * Generic Parsers
+    -- ** General Parsers
   , runArgumentParser
   , runArgumentParser'
   ) where
@@ -55,8 +57,13 @@ data ProgramInfo = ProgramInfo
 -- Only parsing schemes that support generating help output will yield
 -- 'Help' values.
 data Result s r where
+  -- | A successful parsing operation yields a list of leftover
+  -- arguments and a result value.
   Success :: ![Text] -> !r -> Result s r
+  -- | A failed parsing operation yields an error message.
   Failure :: !Text -> Result s r
+  -- | A request for help yields human-readable help output (for
+  -- parsers that support it).
   Help :: SupportsHelp s => !Text -> Result s r
 
 deriving instance Show r => Show (Result s r)
@@ -70,18 +77,17 @@ argsToState args = StreamState args [] False
 -- where the parser @ParseTree s r@ doesn't support help output.
 runSilentParser
   :: (Scheme s, HelpSupport s ~ 'Silent)
-  => ParseTree s r
+  => ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> Result s r
 runSilentParser tree = runSilentParser' tree . argsToState
 
 -- | A more general form of 'runSilentParser' that accepts a custom
 -- 'StreamState' as the starting state.
-
 runSilentParser'
   :: (Scheme s, HelpSupport s ~ 'Silent)
-  => ParseTree s r
-  -> StreamState s
+  => ParseTree s r -- ^ Argument parser
+  -> StreamState s -- ^ Initial stream state
   -> Result s r
 runSilentParser' tree state =
   runArgumentParser' tree state Success Failure NoHelp
@@ -90,9 +96,9 @@ runSilentParser' tree state =
 -- where the parser @ParseTree s r@ supports help output.
 runHelpfulParser
   :: SupportsHelp s
-  => ProgramInfo
-  -> ParseTree s r
-  -> [Text]
+  => ProgramInfo -- ^ Program metadata
+  -> ParseTree s r -- ^ Argument parser
+  -> [Text] -- ^ Input arguments
   -> Result s r
 runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
 
@@ -100,9 +106,9 @@ runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
 -- 'StreamState' as the starting state.
 runHelpfulParser'
   :: SupportsHelp s
-  => ProgramInfo
-  -> ParseTree s r
-  -> StreamState s
+  => ProgramInfo -- ^ Program metadata
+  -> ParseTree s r -- ^ Argument parser
+  -> StreamState s -- ^ Initial stream state
   -> Result s r
 runHelpfulParser' info tree state =
   runArgumentParser' tree state Success Failure (OnHelp _onHelpRequest)
@@ -114,8 +120,8 @@ runHelpfulParser' info tree state =
 -- failures.
 runHelpfulParser_
   :: SupportsHelp s
-  => ParseTree s r
-  -> [Text]
+  => ParseTree s r -- ^ Argument parser
+  -> [Text] -- ^ Input arguments
   -> Result s r
 runHelpfulParser_ tree args =
   runArgumentParser' tree (argsToState args) Success Failure (OnHelp _onHelpRequest)
@@ -131,8 +137,8 @@ runHelpfulParser_ tree args =
 -- error.
 parseArguments
   :: SupportsHelp s
-  => ParseTree s r
-  -> ProgramInfo
+  => ParseTree s r -- ^ Argument parser
+  -> ProgramInfo -- ^ Program metadata
   -> (r -> IO a) -- ^ Program Entrypoint
   -> IO a
 parseArguments tree info action = do
@@ -153,7 +159,7 @@ parseArguments tree info action = do
 -- attempt to evaluate it.
 runArgumentParser
   :: Scheme s
-  => ParseTree s r
+  => ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
@@ -170,7 +176,7 @@ runArgumentParser tree args =
 -- 'StreamState' as the starting state.
 runArgumentParser'
   :: Scheme s
-  => ParseTree s r
+  => ParseTree s r -- ^ Argument parser
   -> StreamState s -- ^ Initial stream state
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
