@@ -137,11 +137,11 @@ runHelpfulParser_ tree args =
 -- error.
 parseArguments
   :: SupportsHelp s
-  => ParseTree s r -- ^ Argument parser
-  -> ProgramInfo -- ^ Program metadata
+  => ProgramInfo -- ^ Program metadata
+  -> ParseTree s r -- ^ Argument parser
   -> (r -> IO a) -- ^ Program Entrypoint
   -> IO a
-parseArguments tree info action = do
+parseArguments info tree action = do
   args <- map T.pack <$> getArgs
   case runHelpfulParser info tree args of
     Success [] result -> action result
