@@ -3,6 +3,7 @@
 
 import           Control.Applicative
 import           Data.Text           (Text)
+import           Mangrove
 import           Mangrove.Unix
 
 --------------------------------------------------------------------------------
@@ -80,10 +81,15 @@ parseSettings =
 run :: Settings -> IO ()
 run = print
 
+programInfo :: ProgramInfo
+programInfo = ProgramInfo
+  { programName = "myvcs"
+  , programDesc = "Track and synchronize version history"
+  }
+
 main :: IO ()
 main =
   parseArguments
+  programInfo
   (addHelpOptions ["--help"] "Display help information" parseSettings)
-  "myvcs"
-  "Track and synchronize version history"
   run

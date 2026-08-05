@@ -281,6 +281,23 @@ This output indicates that our parser accepts (but does not require) a
 requires a single parameter, which is a string. We'll see how to
 improve those type hints later.
 
+## Program Metadata
+
+The last thing we need to define before running our parser is a
+structure with some metadata about the program:
+
+```haskell
+programInfo :: ProgramInfo
+programInfo = ProgramInfo
+  { programName = "mkuser" -- The name of the program
+  , programDesc = "Create user accounts" -- A short description of the program
+  }
+```
+
+This information is used to display nice, human-readable help and
+usage information, which will is discussed in more detail in the [Help
+Options](#help-options) section.
+
 ## Running the Parser
 
 The `parseArguments` function will run our parser with the arguments
@@ -288,18 +305,17 @@ passed to our program by the operating system.
 
 ```haskell
 main :: IO ()
-main = parseArguments parseSettings "mkuser" "Create user accounts" run
+main = parseArguments programInfo parseSettings run
 ```
 
-`parseArguments` takes four arguments: a `UnixParser r`, the name of
-the program (for help output), a description of the program (also for
-help output), and a function of type `r -> IO a`. When the parser
-completes successfully, this function will be called with the result.
-Otherwise, `parseArguments` will print error messages or help
-information as appropriate.
+`parseArguments` takes three arguments: the program metadata (for help
+output), a `UnixParser r`, and a function of type `r -> IO a`. When
+the parser completes successfully, this function will be called with
+the result. Otherwise, `parseArguments` will print error messages or
+help information as appropriate, and then exit.
 
 If you want to run an argument parser without using `IO`, or you want
-to pass your own argument list, check out `runArgumentParser` from
+to pass your own argument list, check out `runHelpfulParser` from
 `Mangrove`.
 
 Now we have a complete program we can build and run to show the
@@ -337,7 +353,7 @@ parseSettings' = addHelpOptions ["--help"]
                  parseSettings
 
 main :: IO ()
-main = parseArguments parseSettings' "mkuser" "Create user accounts" run
+main = parseArguments programInfo parseSettings' run
 ```
 
 Now if we invoke our program with the `--help` option, it will display
