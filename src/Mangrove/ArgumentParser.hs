@@ -40,7 +40,7 @@ import           System.Exit
 import           System.IO
 
 
-import           Mangrove.ParseTree
+import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Text
 

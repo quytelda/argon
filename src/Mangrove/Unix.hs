@@ -34,7 +34,7 @@ import           Control.Applicative
 import           Data.List.NonEmpty   (NonEmpty)
 import           Data.Text            (Text)
 
-import           Mangrove.ParseTree
+import           Mangrove.Parser
 import           Mangrove.Scheme.Sub  (SubParser)
 import qualified Mangrove.Scheme.Sub  as Sub
 import           Mangrove.Scheme.Unix

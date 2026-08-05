@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeOperators             #-}
 
 {-|
-Module      : Mangrove.ParseTree
+Module      : Mangrove.Parser
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
@@ -31,7 +31,7 @@ A "scheme" is a system of parsers and tokens. It determines the method
 by which argument strings are separated. It parses a sequence of
 arguments into tokens and values.
 -}
-module Mangrove.ParseTree
+module Mangrove.Parser
   ( -- * Parse Trees
     ParseTree(..)
   , isProduct

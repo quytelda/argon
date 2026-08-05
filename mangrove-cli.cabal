@@ -28,7 +28,7 @@ source-repository head
 library
   exposed-modules:
       Mangrove.ArgumentParser
-      Mangrove.ParseTree
+      Mangrove.Parser
       Mangrove.Resolve
       Mangrove.Scheme.Sub
       Mangrove.Scheme.Unix
@@ -57,7 +57,7 @@ test-suite mangrove-cli-test
   main-is: Main.hs
   other-modules:
       General
-      Mangrove.ParseTreeSpec
+      Mangrove.ParserSpec
       Spec
       TestParsers
       Paths_mangrove_cli

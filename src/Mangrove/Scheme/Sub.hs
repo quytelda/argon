@@ -24,7 +24,7 @@ module Mangrove.Scheme.Sub
 import           Control.Applicative
 import           Data.Text           (Text)
 
-import           Mangrove.ParseTree
+import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Separable
 import           Mangrove.Text
