@@ -3,6 +3,7 @@
 
 import           Control.Applicative
 import           Data.Text           (Text)
+import           Mangrove
 import           Mangrove.Unix
 
 -- | This record encapsulates all our programs runtime options.
@@ -68,10 +69,18 @@ parseSettings' = addHelpOptions ["--help"]
                  "Display help and usage information"
                  parseSettings
 
+-- | Here we define some metadata for our program. This information
+-- will be used for displaying help output and usage information if
+-- necessary.
+programInfo :: ProgramInfo
+programInfo = ProgramInfo
+  { programName = "mkuser" -- The name of the program
+  , programDesc = "Create user accounts" -- A short description of the program
+  }
+
 main :: IO ()
 main = do
   parseArguments
+    programInfo
     parseSettings'
-    "mkuser"               -- Program Name
-    "Create user accounts" -- Program Description
     run
