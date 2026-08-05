@@ -39,20 +39,21 @@ module Mangrove.Parser
   , isOptional
   , isChoice
 
+    -- ** Feeding Trees
+  , satiate
+
     -- * Parsing Schemes
-  , HelpCapability(..)
   , Scheme(..)
+  , HelpCapability(..)
   , SupportsHelp(..)
 
     -- * Stream Parser
   , StreamParser(..)
-  , StreamCapability(..)
-  , HelpContinuation(..)
-  , HelpHandler
   , StreamHandler(..)
   , StreamState(..)
+  , HelpHandler
+  , HelpContinuation(..)
 
-    -- * Monadic Actions
     -- ** Help
   , requestHelp
 
@@ -73,9 +74,6 @@ module Mangrove.Parser
   , peek
   , push
   , pop_
-
-    -- * Feeding Trees
-  , satiate
   ) where
 
 import           Control.Applicative
@@ -325,6 +323,10 @@ deriving instance Scheme s => Show (StreamState s)
 deriving instance Scheme s => Eq (StreamState s)
 
 class StreamCapability (cap :: HelpCapability) where
+  -- | A handler for when help is requested.
+  --
+  -- This will hold a continuation function for helpful parsing
+  -- schemes, or a placeholder value for silent schemes.
   data HelpContinuation cap (s :: Type -> Type) r
   mapHelpHandler :: (a -> b) -> HelpContinuation cap s a -> HelpContinuation cap s b
 
@@ -339,6 +341,10 @@ instance StreamCapability 'Helpful where
 instance StreamCapability cap => Functor (HelpContinuation cap s) where
   fmap f h = mapHelpHandler f h
 
+-- | A handler for when help is requested.
+--
+-- This will hold a continuation function for helpful parsing
+-- schemes, or a placeholder value for silent schemes.
 type HelpHandler s r = HelpContinuation (HelpSupport s) s r
 
 -- | A collection of continuations to be called for each situation a
