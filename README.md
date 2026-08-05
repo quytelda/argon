@@ -300,7 +300,7 @@ information as appropriate.
 
 If you want to run an argument parser without using `IO`, or you want
 to pass your own argument list, check out `runArgumentParser` from
-`Mangrove.ArgumentParser`.
+`Mangrove`.
 
 Now we have a complete program we can build and run to show the
 argument parser in action!

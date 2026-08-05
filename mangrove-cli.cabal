@@ -27,7 +27,7 @@ source-repository head
 
 library
   exposed-modules:
-      Mangrove.ArgumentParser
+      Mangrove
       Mangrove.Parser
       Mangrove.Resolve
       Mangrove.Scheme.Sub

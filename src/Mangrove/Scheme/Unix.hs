@@ -33,23 +33,23 @@ module Mangrove.Scheme.Unix
 import           Control.Applicative
 import           Control.Monad
 import           Control.Monad.Except
-import qualified Data.List               as List
-import           Data.List.NonEmpty      (NonEmpty)
-import qualified Data.List.NonEmpty      as NonEmpty
-import           Data.Map.Strict         (Map)
-import qualified Data.Map.Strict         as Map
+import qualified Data.List              as List
+import           Data.List.NonEmpty     (NonEmpty)
+import qualified Data.List.NonEmpty     as NonEmpty
+import           Data.Map.Strict        (Map)
+import qualified Data.Map.Strict        as Map
 import           Data.Maybe
 import           Data.String
-import           Data.Text               (Text)
-import qualified Data.Text               as T
-import qualified Data.Text.Lazy          as TL
-import qualified Data.Text.Lazy.Builder  as TLB
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import qualified Data.Text.Lazy         as TL
+import qualified Data.Text.Lazy.Builder as TLB
 
-import           Mangrove.ArgumentParser
+import           Mangrove
 import           Mangrove.Parser
 import           Mangrove.Resolve
-import           Mangrove.Scheme.Sub     (SubScheme)
-import qualified Mangrove.Scheme.Sub     as Sub
+import           Mangrove.Scheme.Sub    (SubScheme)
+import qualified Mangrove.Scheme.Sub    as Sub
 import           Mangrove.Separable
 import           Mangrove.Text
 import           Mangrove.TextParser

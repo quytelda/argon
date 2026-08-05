@@ -9,7 +9,7 @@ import           Data.Text               (Text)
 import           Data.Text.Lazy.Builder
 import           Test.Hspec
 
-import           Mangrove.ArgumentParser
+import           Mangrove
 import           Mangrove.Parser
 import           Mangrove.Scheme.Unix
 
