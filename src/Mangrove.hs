@@ -6,13 +6,13 @@
 {-# LANGUAGE TypeOperators      #-}
 
 {-|
-Module      : Mangrove.ArgumentParser
+Module      : Mangrove
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
 This module contains an API (types and functions) for running argument parsers.
 -}
-module Mangrove.ArgumentParser
+module Mangrove
   ( -- * Types
     ProgramInfo(..)
   , Result(..)
