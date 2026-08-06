@@ -435,8 +435,8 @@ selectSubtable
   :: [Text]
   -> Map [CommandInfo] [OptionHelp]
   -> Map [CommandInfo] [OptionHelp]
-selectSubtable cmds table =
-  Map.filterWithKey (\infos _ -> isParentCommand cmds infos) table
+selectSubtable cmds =
+  Map.filterWithKey (\infos _ -> isParentCommand cmds infos)
 
 isParentCommand :: [Text] -> [CommandInfo] -> Bool
 isParentCommand cmds =

@@ -1,5 +1,4 @@
-{-# LANGUAGE GADTs             #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
 
 {-|
 Module      : Mangrove.Unix

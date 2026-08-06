@@ -117,7 +117,7 @@ instance Functor p => Functor (ParseTree p) where
   fmap f (ParseNode parser) = ParseNode $ fmap f parser
   fmap f (ProdNode g l r)   = ProdNode (\u v -> f $ g u v) l r
   fmap f (SumNode l r)      = SumNode (fmap f l) (fmap f r)
-  fmap f node               = liftA2 ($) (pure f) node
+  fmap f node               = ProdNode ($) (pure f) node
   -- This takes advantage of the fact that f <$> x = pure f <*> x.
 
 instance Functor p => Applicative (ParseTree p) where
@@ -334,7 +334,7 @@ data instance HelpContinuation 'Silent s r
   = NoHelp
   deriving (Functor)
 
-data instance HelpContinuation 'Helpful s r
+newtype instance HelpContinuation 'Helpful s r
   = OnHelp (StreamState s -> r)
   deriving (Functor)
 
