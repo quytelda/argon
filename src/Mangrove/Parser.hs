@@ -65,7 +65,7 @@ module Mangrove.Parser
   , getContext
   , setContext
   , withContext
-  , renderError
+  , formatError
 
     -- ** Streaming
   , popMaybe
@@ -79,10 +79,12 @@ module Mangrove.Parser
 import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
-import qualified Data.List            as List
+import qualified Data.List              as List
 import           Data.Maybe
 import           Data.Proxy
-import           Data.Text            (Text)
+import           Data.Text              (Text)
+import qualified Data.Text.Lazy         as TL
+import qualified Data.Text.Lazy.Builder as TLB
 
 import           Mangrove.Resolve
 import           Mangrove.Separable
@@ -429,9 +431,11 @@ withContext context action = do
   action <* setContext oldContext
 
 -- | Format an error message with context information.
-renderError :: Render tok => [tok] -> Builder -> Builder
-renderError contexts err =
-  mconcat
+formatError :: Render tok => [tok] -> Builder -> Text
+formatError contexts err =
+  TL.toStrict
+  $ TLB.toLazyText
+  $ mconcat
   $ List.intersperse ": "
   $ reverse
   $ err : map render contexts

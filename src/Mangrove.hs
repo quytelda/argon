@@ -126,8 +126,8 @@ runHelpfulParser_
 runHelpfulParser_ tree args =
   runArgumentParser' tree (argsToState args) Success Failure (OnHelp _onHelpRequest)
   where
-    _onHelpRequest state' = Failure $ renderText $
-      renderError (streamContext state') "help requested"
+    _onHelpRequest state' = Failure $
+      formatError (streamContext state') "help requested"
 
 -- | Parse the command line arguments passed to the program, then
 -- invoke the program's entrypoint with the results of the parsing. If
@@ -185,7 +185,7 @@ runArgumentParser'
 runArgumentParser' tree state cok cerr hhelp =
   runStreamParser (satiate tree) handler state
   where
-    _onFailure state' = cerr . renderText . renderError (streamContext state')
+    _onFailure state' = cerr . formatError (streamContext state')
     _onSuccess state' tree' =
       case (streamContent state', resolve tree') of
         (leftovers, Value result) -> cok leftovers result
