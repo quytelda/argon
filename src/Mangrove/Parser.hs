@@ -184,18 +184,21 @@ isSum (SumNode {}) = True
 isSum _            = False
 
 -- | Does this subtree accept optional input?
-isOptional :: ParseTree s r -> Bool
-isOptional (SumNode _ (ValueNode {})) = True
-isOptional (ManyNode False _)         = True
-isOptional _                          = False
+isOptional :: Valency s => ParseTree s r -> Bool
+isOptional (SumNode l (ValueNode _)) = not $ nullary l
+isOptional (ManyNode False p)        = not $ nullary p
+isOptional _                         = False
 
--- | Is this a 'SumNode' that does *not* represent an optional input.
-isChoice :: ParseTree s r -> Bool
-isChoice = liftA2 (&&) isSum (not . isOptional)
+-- | Is this a 'SumNode' a choice between two different (non-empty)
+-- inputs?
+isChoice :: Valency s => ParseTree s r -> Bool
+isChoice (SumNode l r) = not (nullary l) && not (nullary r)
+isChoice _             = False
 
 instance (Valency s, Scheme s) => Render (ParseTree s r) where
   -- special cases
-  render (SumNode p (ValueNode _)) = brackets $ render p
+  render n@(SumNode l _)
+    | isOptional n = renderDelimitedIf brackets (not . isOptional) l
 
   render (ParseNode parser) = usageInfo parser
   render (ProdNode _ l r)
@@ -222,7 +225,7 @@ instance (Valency s, Scheme s) => Render (ParseTree s r) where
   -- Constant nodes that don't accept input have no usage.
   render _ = ""
 
-instance Separable s => Separable (ParseTree s) where
+instance (Separable s, Valency s) => Separable (ParseTree s) where
   separate (SumNode l r) = Exhibit norm (modalsL <> modalsR)
     where
       Exhibit normL modalsL = separate l
