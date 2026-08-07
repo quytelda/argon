@@ -11,8 +11,13 @@ parsers.
 
 module Mangrove.Unix
   ( -- * Types
-    UnixParser
+    UnixScheme
+  , SubScheme
+  , UnixParser
   , SubParser
+  , Flag(..)
+  , TextParser(..)
+  , DefaultParser(..)
 
     -- * Tree-building Combinators
   , parameter
@@ -23,9 +28,7 @@ module Mangrove.Unix
   , subparameter
   , suboption
 
-  -- Re-exports
-  , TextParser(..)
-  , defaultParser
+  -- ** Help Options
   , addHelpOptions
   ) where
 
@@ -34,7 +37,7 @@ import           Data.List.NonEmpty   (NonEmpty)
 import           Data.Text            (Text)
 
 import           Mangrove.Parser
-import           Mangrove.Scheme.Sub  (SubParser)
+import           Mangrove.Scheme.Sub  (SubScheme, SubParser)
 import qualified Mangrove.Scheme.Sub  as Sub
 import           Mangrove.Scheme.Unix
 import           Mangrove.TextParser

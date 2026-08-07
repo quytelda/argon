@@ -16,20 +16,27 @@ module Mangrove
   ( -- * Standard Interface
     parseArguments
 
-    -- * Pure Interface
+    -- * Types
   , ProgramInfo(..)
+  , ParseTree
+  , Scheme
   , Result(..)
+  , SupportsHelp
+  , StreamState
+  , HelpHandler
+  , HelpContinuation(..)
 
-    -- ** Silent Parsers
-  , runSilentParser
-  , runSilentParser'
-
+    -- * Pure Interface
     -- ** Helpful Parsers
   , runHelpfulParser
   , runHelpfulParser'
   , runHelpfulParser_
 
-    -- ** General Parsers
+    -- ** Silent Parsers
+  , runSilentParser
+  , runSilentParser'
+
+    -- ** General Parsers (CPS)
   , runArgumentParser
   , runArgumentParser'
   ) where
@@ -40,7 +47,6 @@ import qualified Data.Text.IO        as TIO
 import           System.Environment
 import           System.Exit
 import           System.IO
-
 
 import           Mangrove.Parser
 import           Mangrove.Resolve
