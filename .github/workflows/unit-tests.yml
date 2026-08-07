@@ -1,0 +1,34 @@
+name: Unit Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+    - main
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v6
+
+      # We reuse the same caching strategy as stack itself.
+      # See: github.com/commercialhaskell/stack/blob/master/.github/workflows/unit-tests.yml
+      - name: Cache dependencies
+        uses: actions/cache@v6
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-${{ hashFiles('stack.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-
+
+      - name: Build dependencies
+        run: stack test --only-dependencies
+
+      - name: Build project and test suite
+        run: stack test --no-run-tests
+
+      - name: Run unit tests
+        run: stack test
