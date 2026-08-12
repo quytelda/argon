@@ -1,5 +1,7 @@
 # Mangrove
 
+[![Unit Tests](https://github.com/quytelda/mangrove/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/quytelda/mangrove/actions/workflows/unit-tests.yml)
+
 Mangrove is a library for building command line argument parsers using
 Haskell's `Applicative` interface. It provides parsers for UNIX-style
 command line syntax, including positional parameters, named options,
