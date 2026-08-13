@@ -8,14 +8,15 @@ and this project adheres to the
 
 ## Unreleased
 
-- Establish types and data structures for building argument parsers
-- Define combinators for constructing parsers
-- Introduce typeclass for parsing schemes
-- Implement a UNIX-style parsing scheme with a subargument parsing
-  scheme
-- Implement a stream parsing monad
-- Implement support for generating help information
-- Add a basic set of unit tests
-- Define an API for running parsers and collecting the results
+## 0.1.0.0 - 2026-08-12
 
-## 0.1.0.0 - YYYY-MM-DD
+### Added
+
+- Types and data structures for building argument parsers
+- Combinators for constructing parsers
+- Typeclass for parsing schemes (Scheme)
+- A UNIX-style parsing scheme with a subargument parsing scheme
+- A stream parsing monad (StreamParser)
+- Support for generating help information
+- A basic test suite with 53 unit tests
+- An API for running parsers and collecting the results
