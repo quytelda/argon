@@ -6,8 +6,8 @@ Mangrove is a library for building command line argument parsers using
 Haskell's `Applicative` interface. It provides parsers for UNIX-style
 command line syntax, including positional parameters, named options,
 and commands, as well as complex subparameters and suboptions (e.g.
-`--mount read-only,src=/dev/sda1,dst=/data`). It is also extensible,
-so you can define alternative command line syntaxes.
+`--mount src=/webroot,dst=/var/www,rw`). It is also extensible, so you
+can define alternative command line syntaxes.
 
 ## Building
 
@@ -44,7 +44,7 @@ and nutrients from the flowing stream. These resources travel back up
 the structure toward the plant, combining along the way.
 
 This is kind of like how the Mangrove library works. We build a
-tree-shaped parser from simple applicative combinators then feed it a
+tree-shaped parser from simple applicative combinators, then feed it a
 sequence of CLI arguments. Simple parsers stationed at the bottom of
 the tree consume these arguments and produce values which are then
 passed back up the tree and combined with the results of other parsers
@@ -95,16 +95,18 @@ and `Text` literals.
 
 __NOTE__: `UnixParser` is just a convenient type synonym for
 `ParseTree UnixScheme`. This tells us that we will build a `ParseTree`
-by combining parsers from the Unix scheme.
+by combining parsers from the UNIX scheme.
 
-## Parameters
+## Positional Parameters
 
-A "parameter" is a positional input that accepts the first non-flag
-argument it encounters. For example, consider a program called
+A "positional parameter" is a positional input that accepts the first
+non-flag argument it encounters. In Mangrove, positional parameters
+are usually just referred to as "parameters" since other kinds of
+parameters have their own names. Consider an example program called
 `substring` whose command line syntax is `substring START END STRING`.
-`START`, `END`, and `STRING` are parameters. If we invoke `substring 1
-3 "example"`, we know that `START` is `1`, `END` is `3`, and `STRING`
-is `"example"` because of the order in which they appear.
+`START`, `END`, and `STRING` would be parameters. If we invoke
+`substring 1 3 "example"`, we know that `START` is `1`, `END` is `3`,
+and `STRING` is `"example"` because of the order in which they appear.
 
 Our program will have just one parameter: a username. Here is how we
 define a parser for it:
@@ -115,7 +117,7 @@ prm_name = parameter defaultParser
 ```
 
 The `parameter` function creates a parameter parser out of a
-`TextParser` (see below).
+`TextParser`.
 
 ### TextParsers
 
