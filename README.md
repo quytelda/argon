@@ -1,5 +1,6 @@
-# Mangrove
+# Mangrove (mangrove-cli)
 
+[![Hackage](https://img.shields.io/hackage/v/mangrove-cli.svg)](https://hackage.haskell.org/package/mangrove-cli)
 [![Unit Tests](https://github.com/quytelda/mangrove/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/quytelda/mangrove/actions/workflows/unit-tests.yml)
 
 Mangrove is a library for building command line argument parsers using
@@ -8,6 +9,17 @@ command line syntax, including positional parameters, named options,
 and commands, as well as complex subparameters and suboptions (e.g.
 `--mount src=/webroot,dst=/var/www,rw`). It is also extensible, so you
 can define alternative command line syntaxes.
+
+## Obtaining
+
+Mangrove is available on Hackage as `mangrove-cli`:
+<https://hackage.haskell.org/package/mangrove-cli>
+
+__NOTE__: This project is not related to the `mangrove` package on
+Hackage. Make sure to use the package name `mangrove-cli`.
+
+The source code for Mangrove is hosted on GitHub:
+<https://github.com/quytelda/mangrove>
 
 ## Building
 
