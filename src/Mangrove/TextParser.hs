@@ -29,7 +29,7 @@ import qualified Data.Text.Read         as TR
 
 import           Mangrove.Text
 
--- | A 'TextParser' is the most atomic client-defined parsing unit. It
+-- | A @TextParser@ is the most basic client-defined parsing unit. It
 -- parses textual data that is not otherwise part of the parsing
 -- scheme into the actual results that will be combined and returned
 -- once parsing completes.
@@ -38,12 +38,12 @@ data TextParser r = TextParser
   , parserRun  :: Text -> Either Text r -- ^ An actual parsing function
   } deriving (Functor)
 
--- | Lift a 'TextParser' into some 'MonadError'.
+-- | A more general function for running t'TextParser's.
 runTextParser :: MonadError Builder m => TextParser r -> Text -> m r
 runTextParser tp = liftEither . first TLB.fromText . parserRun tp
 
 -- | A typeclass for types that have a convenient default
--- 'TextParser'.
+-- t'TextParser' implementation.
 class DefaultParser r where
   -- | A reasonable default TextParser implementation.
   defaultParser :: TextParser r

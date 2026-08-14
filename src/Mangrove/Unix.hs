@@ -45,7 +45,7 @@ import           Mangrove.TextParser
 --------------------------------------------------------------------------------
 -- Tree-building Combinators
 
--- | Create a parameter parser from a 'TextParser'.
+-- | Create a parameter parser from a t'TextParser'.
 parameter
   :: TextParser r
   -> UnixParser r

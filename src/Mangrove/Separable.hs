@@ -39,7 +39,7 @@ instance Applicative Modal where
 usesTerseOutput :: Modal a -> Bool
 usesTerseOutput (Modal terseOutput _) = terseOutput
 
--- | An 'Exhibit' represents an object whose modal sub-components have
+-- | A representation of an object whose modal sub-components have
 -- been split off for the purpose of better help output.
 --
 -- Every parser and parse tree can be decomposed into one regular tree
@@ -47,7 +47,7 @@ usesTerseOutput (Modal terseOutput _) = terseOutput
 data Exhibit a = Exhibit (Maybe a) [Modal a]
   deriving (Functor)
 
--- | Convert an 'Exhibit' to a regular list of regular and modal
+-- | Convert an t'Exhibit' to a regular list of regular and modal
 -- components.
 exhibitToList :: Exhibit a -> [a]
 exhibitToList (Exhibit mnorm modals) =
@@ -61,7 +61,7 @@ exhibitToList (Exhibit mnorm modals) =
 -- significantly easier to read.
 --
 -- NOTE: Decomposed subparsers are intended for display purposes
--- (hence the 'Exhibit' type). Trying to parse input with them is
+-- (hence the t'Exhibit' type). Trying to parse input with them is
 -- likely to fail.
 class Functor s => Separable (s :: Type -> Type) where
   separate :: s r -> Exhibit (s r)

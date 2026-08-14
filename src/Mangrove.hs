@@ -75,7 +75,7 @@ data Result s r where
 deriving instance Show r => Show (Result s r)
 deriving instance Eq r => Eq (Result s r)
 
--- | Create a default initial 'StreamState' from a list of arguments.
+-- | Create a default initial t'StreamState' from a list of arguments.
 argsToState :: [Text] -> StreamState s
 argsToState args = StreamState args [] False
 
@@ -89,7 +89,7 @@ runSilentParser
 runSilentParser tree = runSilentParser' tree . argsToState
 
 -- | A more general form of 'runSilentParser' that accepts a custom
--- 'StreamState' as the starting state.
+-- stream starting state.
 runSilentParser'
   :: (Scheme s, HelpSupport s ~ 'Silent)
   => ParseTree s r -- ^ Argument parser
@@ -109,7 +109,7 @@ runHelpfulParser
 runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
 
 -- | A more general form of 'runHelpfulParser' that accepts a custom
--- 'StreamState' as the starting state.
+-- stream starting state.
 runHelpfulParser'
   :: SupportsHelp s
   => ProgramInfo -- ^ Program metadata
@@ -174,7 +174,7 @@ runArgumentParser
 runArgumentParser tree = runArgumentParser' tree . argsToState
 
 -- | A more general form of 'runArgumentParser' that accepts a custom
--- 'StreamState' as the starting state.
+-- stream starting state.
 runArgumentParser'
   :: Scheme s
   => ParseTree s r -- ^ Argument parser
