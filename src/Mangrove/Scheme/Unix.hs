@@ -376,6 +376,8 @@ collectOptions tree = go tree mempty
        -> Map [CommandInfo] [OptionHelp]
     go (ParseNode (Option info subtree)) =
       Map.insertWith (<>) [] [makeOptionHelp info subtree]
+    go (ParseNode (HelpOption info)) =
+      Map.insertWith (<>) [] [makeOptionHelp info empty]
     go (ParseNode (Command info subtree)) =
       Map.union $ Map.mapKeys (info :) $ collectOptions subtree
     go (ProdNode _ l r) = go r . go l
