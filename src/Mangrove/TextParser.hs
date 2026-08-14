@@ -21,6 +21,7 @@ module Mangrove.TextParser
   ) where
 
 import           Control.Monad.Except
+import           Data.Bifunctor
 import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Lazy.Builder as TLB
@@ -34,12 +35,12 @@ import           Mangrove.Text
 -- once parsing completes.
 data TextParser r = TextParser
   { parserHint :: Text -- ^ A hint about the type of input this parser expects
-  , parserRun  :: Text -> Either Builder r -- ^ An actual parsing function
+  , parserRun  :: Text -> Either Text r -- ^ An actual parsing function
   } deriving (Functor)
 
 -- | Lift a 'TextParser' into some 'MonadError'.
 runTextParser :: MonadError Builder m => TextParser r -> Text -> m r
-runTextParser tp = liftEither . parserRun tp
+runTextParser tp = liftEither . first TLB.fromText . parserRun tp
 
 -- | A typeclass for types that have a convenient default
 -- 'TextParser'.
@@ -47,12 +48,12 @@ class DefaultParser r where
   -- | A reasonable default TextParser implementation.
   defaultParser :: TextParser r
 
-exactly :: TR.Reader a -> Text -> Either Builder a
+exactly :: TR.Reader a -> Text -> Either Text a
 exactly reader text =
   case reader text of
-    Left err            -> throwError $ TLB.fromString err
+    Left err            -> throwError $ T.pack err
     Right (result, "")  -> pure result
-    Right (_, leftover) -> throwError $ "unexpected input: " <> render leftover
+    Right (_, leftover) -> throwError $ "unexpected input: " <> leftover
 
 instance DefaultParser Bool where
   defaultParser = TextParser
