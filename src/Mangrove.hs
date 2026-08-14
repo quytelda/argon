@@ -171,12 +171,7 @@ runArgumentParser
   -> (Text -> a) -- ^ Failure handler
   -> HelpHandler s a -- ^ Help request handler
   -> a
-runArgumentParser tree args =
-  runArgumentParser' tree StreamState
-  { streamContent = args
-  , streamContext = []
-  , streamEscaped = False
-  }
+runArgumentParser tree = runArgumentParser' tree . argsToState
 
 -- | A more general form of 'runArgumentParser' that accepts a custom
 -- 'StreamState' as the starting state.
