@@ -29,8 +29,8 @@ import           Mangrove.Text
 -- and didn't find it, and (2) the parser resolved to an empty value.
 data ResolveM a
   = EmptyError
-  | ExpectedError [Builder]
-  | Value a
+  | ExpectedError ![Builder]
+  | Value !a
   deriving (Functor)
 
 instance Applicative ResolveM where

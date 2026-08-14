@@ -101,15 +101,15 @@ data ParseTree (scheme :: Type -> Type) (r :: Type) where
   -- | Terminal node with no value (abstracts 'empty')
   EmptyNode :: ParseTree scheme r
   -- | A terminal node with a resolved value (abstracts 'pure')
-  ValueNode :: r -> ParseTree scheme r
+  ValueNode :: !r -> ParseTree scheme r
   -- | A parser awaiting input
   ParseNode :: scheme r -> ParseTree scheme r
   -- | Abstracts 'liftA2' and by extension '(<*>)'
-  ProdNode :: (u -> v -> r) -> ParseTree scheme u -> ParseTree scheme v -> ParseTree scheme r
+  ProdNode :: !(u -> v -> r) -> ParseTree scheme u -> ParseTree scheme v -> ParseTree scheme r
   -- | Abstracts '(<|>)'
   SumNode :: ParseTree scheme r -> ParseTree scheme r -> ParseTree scheme r
   -- | Abstracts 'many' (@MaybeNode False@) and 'some' (@MaybeNode True@)
-  ManyNode :: Bool -> ParseTree scheme r -> ParseTree scheme [r]
+  ManyNode :: !Bool -> ParseTree scheme r -> ParseTree scheme [r]
 
 instance Functor p => Functor (ParseTree p) where
   fmap _ EmptyNode          = EmptyNode
@@ -319,9 +319,9 @@ class (Scheme s, HelpSupport s ~ 'Helpful) => SupportsHelp s where
 -- arguments to be interpreted as positional arguments, even if they
 -- would normally be interpreted as options or commands.
 data StreamState s = StreamState
-  { streamContent :: [Text]    -- ^ A sequence of 'Text' values
-  , streamContext :: [Token s] -- ^ A stack representing current parsing context
-  , streamEscaped :: Bool      -- ^ Escaped mode
+  { streamContent :: ![Text]    -- ^ A sequence of 'Text' values
+  , streamContext :: ![Token s] -- ^ A stack representing current parsing context
+  , streamEscaped :: !Bool      -- ^ Escaped mode
   }
 
 deriving instance Scheme s => Show (StreamState s)

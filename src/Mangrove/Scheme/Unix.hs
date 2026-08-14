@@ -68,8 +68,8 @@ import           Mangrove.Valency
 -- Thus, you can write @"--flop"@ instead of @LongFlag "flop"@ and
 -- @"-c"@ instead of @ShortFlag \'c\'@.
 data Flag
-  = LongFlag Text
-  | ShortFlag Char
+  = LongFlag !Text
+  | ShortFlag !Char
   deriving (Eq, Ord, Show)
 
 instance IsString Flag where
@@ -85,8 +85,8 @@ instance Render Flag where
 
 -- | A description of a CLI option.
 data OptionInfo = OptionInfo
-  { optFlags :: NonEmpty Flag -- ^ A list of flags that trigger this option.
-  , optHelp  :: Text -- ^ A description displayed in help output.
+  { optFlags :: !(NonEmpty Flag) -- ^ A list of flags that trigger this option.
+  , optHelp  :: !Text -- ^ A description displayed in help output.
   } deriving (Eq, Ord, Show)
 
 -- | Get a representative flag for this option (e.g. the first one).
@@ -95,8 +95,8 @@ optHead = NonEmpty.head . optFlags
 
 -- | A description of a CLI command.
 data CommandInfo = CommandInfo
-  { cmdNames :: NonEmpty Text -- ^ Command Names
-  , cmdHelp  :: Text -- ^ A description displayed in help output.
+  { cmdNames :: !(NonEmpty Text) -- ^ Command Names
+  , cmdHelp  :: !Text -- ^ A description displayed in help output.
   } deriving (Eq, Ord, Show)
 
 -- | Get a representative command name for this command (e.g. the
@@ -109,11 +109,11 @@ data UnixScheme r
   -- | A freeform positional parameter
   = Parameter (TextParser r)
   -- | A subcommand with its own parse tree
-  | Command CommandInfo (ParseTree UnixScheme r)
+  | Command !CommandInfo (ParseTree UnixScheme r)
   -- | A named option that might support suboptions
-  | Option OptionInfo (ParseTree SubScheme r)
+  | Option !OptionInfo (ParseTree SubScheme r)
   -- | A special option that requests help information
-  | HelpOption OptionInfo
+  | HelpOption !OptionInfo
   deriving (Functor)
 
 instance Valency UnixScheme where
@@ -344,10 +344,10 @@ addHelpOptions flags desc tree = ParseNode helpOption <|> go tree
     go node = node
 
 data OptionHelp = OptionHelp
-  { colShorts :: TL.Text -- Column 1
-  , colLongs  :: TL.Text -- Column 2
-  , colArg    :: TL.Text -- Column 3
-  , colDesc   :: TL.Text -- Column 4
+  { colShorts :: !TL.Text -- Column 1
+  , colLongs  :: !TL.Text -- Column 2
+  , colArg    :: !TL.Text -- Column 3
+  , colDesc   :: !TL.Text -- Column 4
   } deriving (Eq, Ord, Show)
 
 makeOptionHelp :: OptionInfo -> ParseTree SubScheme r -> OptionHelp

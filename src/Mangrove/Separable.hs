@@ -24,7 +24,7 @@ import           Data.Maybe
 -- input. This can happen because the parsing context changed (for
 -- example, when a command is recognized) or when the parsing is
 -- exited entirely (for example, when a help option is encountered).
-data Modal a = Modal Bool a
+data Modal a = Modal !Bool a
   deriving (Functor)
 
 instance Applicative Modal where

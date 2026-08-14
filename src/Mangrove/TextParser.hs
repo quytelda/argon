@@ -34,7 +34,7 @@ import           Mangrove.Text
 -- scheme into the actual results that will be combined and returned
 -- once parsing completes.
 data TextParser r = TextParser
-  { parserHint :: Text -- ^ A hint about the type of input this parser expects
+  { parserHint :: !Text -- ^ A hint about the type of input this parser expects
   , parserRun  :: Text -> Either Text r -- ^ An actual parsing function
   } deriving (Functor)
 

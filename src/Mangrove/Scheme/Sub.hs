@@ -34,7 +34,7 @@ import           Mangrove.Valency
 -- | Parsers for subarguments of an option (e.g. @--option key=value@).
 data SubScheme r
   = Parameter (TextParser r) -- ^ Parses freeform arguments
-  | Option Text (TextParser r) -- ^ Suboptions have the form "KEY=VALUE"
+  | Option !Text (TextParser r) -- ^ Suboptions have the form "KEY=VALUE"
   deriving (Functor)
 
 instance Valency SubScheme where
