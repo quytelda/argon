@@ -8,6 +8,22 @@ and this project adheres to the
 
 ## Unreleased
 
+## 0.2.0.0 - 2026-08-14
+
+### Added
+
+- Documentation about where to obtain this library
+
+### Changed
+
+- Loosen bounds on dependency versions so the project can be built
+  against a wider range of snapshots
+- Change the error message type for TextParsers from 'Builder' to 'Text'
+- Fix missing help options in help output
+- Fix unit test builds when using cabal
+- Make minor code quality improvements
+- Add strictness annotations to simple values in constructors
+
 ## 0.1.0.0 - 2026-08-12
 
 ### Added
