@@ -174,6 +174,6 @@ spec_StreamParser = do
       let (finalState, result) = runStreamParser' pop (initState_singleton @UnixScheme)
       it "gets the first item without replacement" $ do
         result `shouldBe` SSuccess "asdf"
-        streamContent finalState `shouldBe` tail (streamContent initState_singleton)
+        streamContent finalState `shouldBe` drop 1 (streamContent initState_singleton)
       it "preserves the context" $ do
         streamContext initState_singleton `shouldBe` streamContext finalState
