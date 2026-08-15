@@ -65,7 +65,7 @@ optionPure
   -> Text
   -> a
   -> UnixParser a
-optionPure flags help = ParseNode . Option (OptionInfo flags help) . pure
+optionPure flags help = option flags help . pure
 
 -- | Define a CLI option which produces 'True' if present and 'False'
 -- otherwise.
