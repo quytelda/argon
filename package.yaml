@@ -51,3 +51,5 @@ tests:
     dependencies:
     - mangrove-cli
     - hspec >= 2.9 && < 3
+    build-tools:
+    - hspec-discover >= 2.9 && < 3
