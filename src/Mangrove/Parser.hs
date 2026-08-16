@@ -50,7 +50,7 @@ module Mangrove.Parser
   , StreamParser(..)
   , StreamHandler(..)
   , StreamState(..)
-  , HelpHandler
+  , RequestHandler
   , ReqContinuation(..)
 
     -- ** Help
@@ -333,7 +333,7 @@ newtype instance ReqContinuation 'True s r
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
-type HelpHandler s r = ReqContinuation (RequestSupport s) s r
+type RequestHandler s r = ReqContinuation (RequestSupport s) s r
 
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.
@@ -341,7 +341,7 @@ data StreamHandler s a r = StreamHandler
   { onSuccess :: StreamState s -> a -> r -- ^ Success Continuation
   , onEmpty   :: StreamState s -> r -- ^ Empty continuation
   , onFailure :: StreamState s -> Builder -> r -- ^ Failure Continuation
-  , onRequest :: HelpHandler s r -- ^ Help Continuation
+  , onRequest :: RequestHandler s r -- ^ Request Continuation
   }
 
 -- | The amazing stream parsing monad! This monad tracks the stream

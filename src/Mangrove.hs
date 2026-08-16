@@ -23,7 +23,7 @@ module Mangrove
   , Result(..)
   , SupportsHelp
   , StreamState
-  , HelpHandler
+  , RequestHandler
   , ReqContinuation(..)
 
     -- * Pure Interface
@@ -169,7 +169,7 @@ runArgumentParser
   -> [Text] -- ^ Input arguments
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
-  -> HelpHandler s a -- ^ Help request handler
+  -> RequestHandler s a -- ^ Help request handler
   -> a
 runArgumentParser tree = runArgumentParser' tree . argsToState
 
@@ -181,7 +181,7 @@ runArgumentParser'
   -> StreamState s -- ^ Initial stream state
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
-  -> HelpHandler s a -- ^ Help request handler
+  -> RequestHandler s a -- ^ Help request handler
   -> a
 runArgumentParser' tree state cok cerr hhelp =
   runStreamParser (satiate tree) handler state
