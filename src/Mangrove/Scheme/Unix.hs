@@ -113,27 +113,27 @@ data UnixScheme r
   -- | A named option that might support suboptions
   | Option !OptionInfo (ParseTree SubScheme r)
   -- | A special option that requests help information
-  | RequestOption !OptionInfo
+  | RequestOption !OptionInfo !RequestType
   deriving (Functor)
 
 instance Valency UnixScheme where
   valency (Parameter _)       = Just 1
   valency (Command _ subtree) = fmap (+1) (valency subtree)
   valency (Option _ subtree)  = fmap (max 2) (valency subtree)
-  valency (RequestOption _)      = Just 1
+  valency (RequestOption {})  = Just 1
 
 instance Resolve UnixScheme where
   resolve (Parameter (TextParser hint _)) =
     ExpectedError [render hint]
   resolve (Option info _) =
     ExpectedError [render $ optHead info]
-  resolve (RequestOption info) =
+  resolve (RequestOption info _) =
     ExpectedError [render $ optHead info]
   resolve (Command info _) =
     ExpectedError [render $ cmdHead info]
 
 instance Separable UnixScheme where
-  separate p@(RequestOption _) = Exhibit Nothing [Modal True p]
+  separate p@(RequestOption {}) = Exhibit Nothing [Modal True p]
   separate (Command info subtree) =
     Exhibit Nothing $ (Modal False <$> maybeToList mregular) <> modals
     where
@@ -259,7 +259,7 @@ instance Scheme UnixScheme where
           (_, result) <- parseSubargs []
           pure result
 
-  activate (RequestOption info) = do
+  activate (RequestOption info requestType) = do
     -- Arguments should never be interpreted as options when escaped.
     getEscaped >>= guard . not
 
@@ -267,8 +267,8 @@ instance Scheme UnixScheme where
     guard $ flag `elem` optFlags info
     pop_
 
-    withContext (UnixOption flag mbound)
-      request
+    withContext (UnixOption flag mbound) $
+      request requestType
 
   activate (Command info subtree) = do
     -- Arguments should never be interpreted as commands when escaped.
@@ -295,7 +295,7 @@ instance Scheme UnixScheme where
           separator = case flag of
                         LongFlag _ -> "="
                         _          -> ""
-  usageInfo (RequestOption info) =
+  usageInfo (RequestOption info _) =
     render (optHead info)
 
 instance Render (Token UnixScheme) where
@@ -331,7 +331,7 @@ addHelpOptions
 addHelpOptions flags desc tree = ParseNode helpOption <|> go tree
   where
     helpOption :: UnixScheme a
-    helpOption = RequestOption $ OptionInfo flags desc
+    helpOption = RequestOption (OptionInfo flags desc) HelpRequest
 
     go :: ParseTree UnixScheme a -> ParseTree UnixScheme a
     go (ParseNode (Command info subtree)) =
@@ -376,7 +376,7 @@ collectOptions tree = go tree mempty
        -> Map [CommandInfo] [OptionHelp]
     go (ParseNode (Option info subtree)) =
       Map.insertWith (<>) [] [makeOptionHelp info subtree]
-    go (ParseNode (RequestOption info)) =
+    go (ParseNode (RequestOption info _)) =
       Map.insertWith (<>) [] [makeOptionHelp info empty]
     go (ParseNode (Command info subtree)) =
       Map.union $ Map.mapKeys (info :) $ collectOptions subtree

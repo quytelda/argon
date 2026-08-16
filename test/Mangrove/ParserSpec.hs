@@ -120,7 +120,7 @@ data StreamResult r
   = SSuccess r
   | SEmpty
   | SFailure Builder
-  | SHelpReq
+  | SRequest RequestType
   deriving (Eq, Show)
 
 -- | Sink the results of a 'StreamParser' into a data type for easier inspection.
@@ -136,7 +136,7 @@ runStreamParser' parser state =
       { onSuccess = \s result -> (s, SSuccess result)
       , onEmpty = \s -> (s, SEmpty)
       , onFailure = \s err -> (s, SFailure err)
-      , onRequest = OnRequest $ \s -> (s, SHelpReq)
+      , onRequest = OnRequest $ \s t -> (s, SRequest t)
       }
 
 initState_empty :: StreamState s

@@ -333,7 +333,7 @@ data instance ReqContinuation 'False s r
   deriving (Functor)
 
 newtype instance ReqContinuation 'True s r
-  = OnRequest (StreamState s -> r)
+  = OnRequest (StreamState s -> RequestType -> r)
   deriving (Functor)
 
 -- | A handler for when help is requested.
@@ -405,10 +405,10 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-request :: RequestSupport s ~ 'True => StreamParser s a
-request = StreamParser $ \handler state ->
+request :: RequestSupport s ~ 'True => RequestType -> StreamParser s a
+request requestType = StreamParser $ \handler state ->
   case onRequest handler of
-    OnRequest h -> h state
+    OnRequest h -> h state requestType
 
 -- | Get a list representing the current context stack.
 getContext :: StreamParser s [Token s]
