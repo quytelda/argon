@@ -50,6 +50,7 @@ module Mangrove.Parser
   , StreamParser(..)
   , StreamHandler(..)
   , StreamState(..)
+  , RequestType(..)
   , RequestHandler
   , ReqContinuation(..)
 
@@ -314,6 +315,12 @@ data StreamState s = StreamState
 
 deriving instance Scheme s => Show (StreamState s)
 deriving instance Scheme s => Eq (StreamState s)
+
+-- | What information is being requested?
+data RequestType
+  = VersionRequest -- ^ A request for version information
+  | HelpRequest -- ^ A request for help and usage information
+  deriving (Eq, Show)
 
 -- | A handler for when help is requested.
 --
