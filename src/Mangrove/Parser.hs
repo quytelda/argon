@@ -44,7 +44,7 @@ module Mangrove.Parser
 
     -- * Parsing Schemes
   , Scheme(..)
-  , HelpCapability(..)
+  , RequestCapability(..)
   , SupportsHelp(..)
 
     -- * Stream Parser
@@ -256,7 +256,7 @@ instance (Separable s, Valency s) => Separable (ParseTree s) where
 -- | A marker that distinguishes "silent" schemes (which produce no
 -- help output) from "helpful" schemes, which support the production
 -- of help output.
-data HelpCapability = Silent | Helpful
+data RequestCapability = Silent | Helpful
 
 -- | A scheme is a system of parsers and tokens. It parses a sequence
 -- of arguments into tokens and values.
@@ -270,8 +270,8 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
   --
   -- It is 'Silent' by default, but must be set to 'Helpful' if the
   -- scheme will implement an instance of 'SupportsHelp'.
-  type HelpSupport s :: HelpCapability
-  type HelpSupport s = 'Silent
+  type RequestSupport s :: RequestCapability
+  type RequestSupport s = 'Silent
 
   -- | 'delimiter' is the character that separates argument strings in
   -- combined string representation. For example, arguments in the CLI
@@ -297,8 +297,8 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
 -- | A class for schemes that support human-readable help output.
 --
 -- NOTE: In order to define a 'SupportsHelp' instance for some @Scheme
--- s@, @HelpSupport s@ must be set to 'Helpful'.
-class (Scheme s, HelpSupport s ~ 'Helpful) => SupportsHelp s where
+-- s@, @RequestSupport s@ must be set to 'Helpful'.
+class (Scheme s, RequestSupport s ~ 'Helpful) => SupportsHelp s where
   makeHelpInfo :: ParseTree s r -> [Token s] -> Text -> Text -> Text
 
 --------------------------------------------------------------------------------
@@ -331,7 +331,7 @@ deriving instance Scheme s => Eq (StreamState s)
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
-data family ReqContinuation (cap :: HelpCapability) (s :: Type -> Type) r
+data family ReqContinuation (cap :: RequestCapability) (s :: Type -> Type) r
 
 data instance ReqContinuation 'Silent s r
   = NoRequests
@@ -345,7 +345,7 @@ newtype instance ReqContinuation 'Helpful s r
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
-type HelpHandler s r = ReqContinuation (HelpSupport s) s r
+type HelpHandler s r = ReqContinuation (RequestSupport s) s r
 
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.
@@ -410,7 +410,7 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: HelpSupport s ~ 'Helpful => StreamParser s a
+requestHelp :: RequestSupport s ~ 'Helpful => StreamParser s a
 requestHelp = StreamParser $ \handler state ->
   case onRequest handler of
     OnRequest h -> h state

@@ -170,7 +170,7 @@ instance Scheme UnixScheme where
     | UnixOption Flag (Maybe Text)
     deriving (Eq, Show)
 
-  type HelpSupport UnixScheme = 'Helpful
+  type RequestSupport UnixScheme = 'Helpful
 
   delimiter _ = ' '
 

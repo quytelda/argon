@@ -82,7 +82,7 @@ argsToState args = StreamState args [] False
 -- | Attempt to parse a value of type @r@ from a list of arguments,
 -- where the parser @ParseTree s r@ doesn't support help output.
 runSilentParser
-  :: (Scheme s, HelpSupport s ~ 'Silent)
+  :: (Scheme s, RequestSupport s ~ 'Silent)
   => ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> Result s r
@@ -91,7 +91,7 @@ runSilentParser tree = runSilentParser' tree . argsToState
 -- | A more general form of 'runSilentParser' that accepts a custom
 -- stream starting state.
 runSilentParser'
-  :: (Scheme s, HelpSupport s ~ 'Silent)
+  :: (Scheme s, RequestSupport s ~ 'Silent)
   => ParseTree s r -- ^ Argument parser
   -> StreamState s -- ^ Initial stream state
   -> Result s r
