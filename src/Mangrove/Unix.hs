@@ -23,6 +23,7 @@ module Mangrove.Unix
   , parameter
   , option
   , optionPure
+  , optionHelp
   , switch
   , command
   , subparameter
@@ -66,6 +67,13 @@ optionPure
   -> a
   -> UnixParser a
 optionPure flags help = option flags help . pure
+
+optionHelp
+  :: NonEmpty Flag
+  -> Text
+  -> HelpBehavior
+  -> UnixParser a
+optionHelp flags help = ParseNode . HelpOption (OptionInfo flags help)
 
 -- | Define a CLI option which produces 'True' if present and 'False'
 -- otherwise.
