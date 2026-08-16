@@ -55,16 +55,16 @@ import           Mangrove.Text
 -- | The results of a parsing operation.
 --
 -- Only parsing schemes that support generating help output will yield
--- 'Help' values.
+-- 'Response' values.
 data Result s r where
   -- | A successful parsing operation yields a list of leftover
   -- arguments and a result value.
   Success :: ![Text] -> !r -> Result s r
   -- | A failed parsing operation yields an error message.
   Failure :: !Text -> Result s r
-  -- | A request for help yields human-readable help output (for
+  -- | A request for information yields a human-readable response (for
   -- parsers that support it).
-  Help :: SupportsHelp s => !Text -> Result s r
+  Response :: SupportsHelp s => !Text -> Result s r
 
 deriving instance Show r => Show (Result s r)
 deriving instance Eq r => Eq (Result s r)
@@ -114,9 +114,9 @@ runHelpfulParser' info tree state =
   runArgumentParser' tree state Success Failure (OnRequest _onRequest)
   where
     _onRequest state' HelpRequest =
-      Help $ makeHelpInfo tree (streamContext state') info
+      Response $ makeHelpInfo tree (streamContext state') info
     _onRequest _ VersionRequest =
-      Help $ makeVersionInfo info
+      Response $ makeVersionInfo info
 
 -- | A variant of 'runHelpfulParser' that treats help requests as
 -- failures.
@@ -153,7 +153,7 @@ parseArguments info tree action = do
     Failure err -> do
       TIO.hPutStrLn stderr err
       exitFailure
-    Help output -> do
+    Response output -> do
       TIO.putStr output
       exitSuccess
 

@@ -120,18 +120,18 @@ optionSpec = do
           , programDesc = "description"
           } :: ProgramInfo s
 
-        isHelpResult (Help _) = True
-        isHelpResult _        = False
+        isResponse (Response {}) = True
+        isResponse _             = False
 
     context "when a help option is present" $ do
       it "requests help" $ do
         runHelpfulParser progInfo (withHelp opt_example_unit) ["--help"]
-          `shouldSatisfy` isHelpResult
+          `shouldSatisfy` isResponse
       it "works for subcommands" $ do
         runHelpfulParser progInfo (withHelp cmd_example_tree) ["example", "--help"]
-          `shouldSatisfy` isHelpResult
+          `shouldSatisfy` isResponse
         runHelpfulParser progInfo (withHelp cmd_example_tree) ["example", "asdf", "--help"]
-          `shouldSatisfy` isHelpResult
+          `shouldSatisfy` isResponse
 
     context "when a help option is absent" $ do
       it "doesn't request help" $ do
