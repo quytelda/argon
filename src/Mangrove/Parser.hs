@@ -52,7 +52,7 @@ module Mangrove.Parser
   , StreamHandler(..)
   , StreamState(..)
   , HelpHandler
-  , HelpContinuation(..)
+  , ReqContinuation(..)
 
     -- ** Help
   , requestHelp
@@ -331,13 +331,13 @@ deriving instance Scheme s => Eq (StreamState s)
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
-data family HelpContinuation (cap :: HelpCapability) (s :: Type -> Type) r
+data family ReqContinuation (cap :: HelpCapability) (s :: Type -> Type) r
 
-data instance HelpContinuation 'Silent s r
+data instance ReqContinuation 'Silent s r
   = NoHelp
   deriving (Functor)
 
-newtype instance HelpContinuation 'Helpful s r
+newtype instance ReqContinuation 'Helpful s r
   = OnHelp (StreamState s -> r)
   deriving (Functor)
 
@@ -345,7 +345,7 @@ newtype instance HelpContinuation 'Helpful s r
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
-type HelpHandler s r = HelpContinuation (HelpSupport s) s r
+type HelpHandler s r = ReqContinuation (HelpSupport s) s r
 
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.

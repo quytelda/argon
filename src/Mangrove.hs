@@ -24,7 +24,7 @@ module Mangrove
   , SupportsHelp
   , StreamState
   , HelpHandler
-  , HelpContinuation(..)
+  , ReqContinuation(..)
 
     -- * Pure Interface
     -- ** Helpful Parsers
