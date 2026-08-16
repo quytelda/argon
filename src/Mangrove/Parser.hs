@@ -54,7 +54,7 @@ module Mangrove.Parser
   , ReqContinuation(..)
 
     -- ** Help
-  , requestHelp
+  , request
 
     -- ** Escaping
   , setEscaped
@@ -398,8 +398,8 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: RequestSupport s ~ 'True => StreamParser s a
-requestHelp = StreamParser $ \handler state ->
+request :: RequestSupport s ~ 'True => StreamParser s a
+request = StreamParser $ \handler state ->
   case onRequest handler of
     OnRequest h -> h state
 

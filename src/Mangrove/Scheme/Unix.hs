@@ -268,7 +268,7 @@ instance Scheme UnixScheme where
     pop_
 
     withContext (UnixOption flag mbound)
-      requestHelp
+      request
 
   activate (Command info subtree) = do
     -- Arguments should never be interpreted as commands when escaped.
