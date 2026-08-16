@@ -334,11 +334,11 @@ deriving instance Scheme s => Eq (StreamState s)
 data family ReqContinuation (cap :: HelpCapability) (s :: Type -> Type) r
 
 data instance ReqContinuation 'Silent s r
-  = NoHelp
+  = NoRequests
   deriving (Functor)
 
 newtype instance ReqContinuation 'Helpful s r
-  = OnHelp (StreamState s -> r)
+  = OnRequest (StreamState s -> r)
   deriving (Functor)
 
 -- | A handler for when help is requested.
@@ -413,7 +413,7 @@ getEscaped = StreamParser $ \handler state ->
 requestHelp :: HelpSupport s ~ 'Helpful => StreamParser s a
 requestHelp = StreamParser $ \handler state ->
   case onRequest handler of
-    OnHelp h -> h state
+    OnRequest h -> h state
 
 -- | Get a list representing the current context stack.
 getContext :: StreamParser s [Token s]

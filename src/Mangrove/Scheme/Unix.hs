@@ -224,7 +224,7 @@ instance Scheme UnixScheme where
           runArgumentParser' subtree (initState args)
           (curry pure)
           (throwError . render)
-          NoHelp
+          NoRequests
 
     withContext (UnixOption flag mbound) $ do
       -- If a bound argument (e.g. --floop=blah) is provided, we

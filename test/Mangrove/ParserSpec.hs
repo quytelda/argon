@@ -136,7 +136,7 @@ runStreamParser' parser state =
       { onSuccess = \s result -> (s, SSuccess result)
       , onEmpty = \s -> (s, SEmpty)
       , onFailure = \s err -> (s, SFailure err)
-      , onRequest = OnHelp $ \s -> (s, SHelpReq)
+      , onRequest = OnRequest $ \s -> (s, SHelpReq)
       }
 
 initState_empty :: StreamState s

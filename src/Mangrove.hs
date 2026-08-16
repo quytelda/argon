@@ -96,7 +96,7 @@ runSilentParser'
   -> StreamState s -- ^ Initial stream state
   -> Result s r
 runSilentParser' tree state =
-  runArgumentParser' tree state Success Failure NoHelp
+  runArgumentParser' tree state Success Failure NoRequests
 
 -- | Attempt to parse a value of type @r@ from a list of arguments,
 -- where the parser @ParseTree s r@ supports help output.
@@ -117,7 +117,7 @@ runHelpfulParser'
   -> StreamState s -- ^ Initial stream state
   -> Result s r
 runHelpfulParser' info tree state =
-  runArgumentParser' tree state Success Failure (OnHelp _onRequest)
+  runArgumentParser' tree state Success Failure (OnRequest _onRequest)
   where
     _onRequest state' =
       Help $ makeHelpInfo tree (streamContext state') (programName info) (programDesc info)
@@ -130,7 +130,7 @@ runHelpfulParser_
   -> [Text] -- ^ Input arguments
   -> Result s r
 runHelpfulParser_ tree args =
-  runArgumentParser' tree (argsToState args) Success Failure (OnHelp _onRequest)
+  runArgumentParser' tree (argsToState args) Success Failure (OnRequest _onRequest)
   where
     _onRequest state' = Failure $
       formatError (streamContext state') "help requested"
