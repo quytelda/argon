@@ -5,6 +5,7 @@ module General (spec) where
 
 import           Control.Applicative
 
+import           Data.Version
 import           Test.Hspec
 
 import           Mangrove
@@ -113,7 +114,12 @@ optionSpec = do
           `shouldBe` Success [] "value=asdf"
 
   describe "help options" $ do
-    let progInfo = ProgramInfo "example" "description"
+    let progInfo = ProgramInfo
+          { programName = "example"
+          , programVersion = makeVersion [1,0]
+          , programDesc = "description"
+          } :: ProgramInfo s
+
         isHelpResult (Help _) = True
         isHelpResult _        = False
 

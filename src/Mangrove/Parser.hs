@@ -44,6 +44,7 @@ module Mangrove.Parser
 
     -- * Parsing Schemes
   , Scheme(..)
+  , ProgramInfo(..)
   , SupportsHelp(..)
 
     -- * Stream Parser
@@ -85,6 +86,7 @@ import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
+import           Data.Version
 
 import           Mangrove.Resolve
 import           Mangrove.Separable
@@ -285,6 +287,13 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
   -- | Render human-readable usage information for a particular
   -- parser.
   usageInfo :: s r -> Builder
+
+-- | Program metadata for displaying help output.
+data ProgramInfo (s :: Type -> Type) = ProgramInfo
+  { programName    :: !Text -- ^ The program name
+  , programVersion :: !Version -- ^ The program version
+  , programDesc    :: !Text -- ^ A description of the program
+  } deriving (Show)
 
 -- | A class for schemes that support human-readable help output.
 class (Scheme s, RequestSupport s ~ 'True) => SupportsHelp s where

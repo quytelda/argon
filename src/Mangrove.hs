@@ -52,12 +52,6 @@ import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Text
 
--- | Program metadata for displaying help output.
-data ProgramInfo = ProgramInfo
-  { programName :: !Text -- ^ The program name
-  , programDesc :: !Text -- ^ A description of the program
-  } deriving (Show)
-
 -- | The results of a parsing operation.
 --
 -- Only parsing schemes that support generating help output will yield
@@ -102,7 +96,7 @@ runSilentParser' tree state =
 -- where the parser @ParseTree s r@ supports help output.
 runHelpfulParser
   :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> Result s r
@@ -112,7 +106,7 @@ runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
 -- stream starting state.
 runHelpfulParser'
   :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> StreamState s -- ^ Initial stream state
   -> Result s r
@@ -145,7 +139,7 @@ runHelpfulParser_ tree args =
 -- error.
 parseArguments
   :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> (r -> IO a) -- ^ Program Entrypoint
   -> IO a
