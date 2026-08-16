@@ -44,18 +44,17 @@ module Mangrove.Parser
 
     -- * Parsing Schemes
   , Scheme(..)
-  , HelpCapability(..)
   , SupportsHelp(..)
 
     -- * Stream Parser
   , StreamParser(..)
   , StreamHandler(..)
   , StreamState(..)
-  , HelpHandler
-  , HelpContinuation(..)
+  , RequestHandler
+  , ReqContinuation(..)
 
     -- ** Help
-  , requestHelp
+  , request
 
     -- ** Escaping
   , setEscaped
@@ -253,11 +252,6 @@ instance (Separable s, Valency s) => Separable (ParseTree s) where
 --------------------------------------------------------------------------------
 -- Parsing Schemes
 
--- | A marker that distinguishes "silent" schemes (which produce no
--- help output) from "helpful" schemes, which support the production
--- of help output.
-data HelpCapability = Silent | Helpful
-
 -- | A scheme is a system of parsers and tokens. It parses a sequence
 -- of arguments into tokens and values.
 class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => Scheme (s :: Type -> Type) where
@@ -267,11 +261,8 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
 
   -- | This type indicates whether a parsing scheme supports help
   -- output.
-  --
-  -- It is 'Silent' by default, but must be set to 'Helpful' if the
-  -- scheme will implement an instance of 'SupportsHelp'.
-  type HelpSupport s :: HelpCapability
-  type HelpSupport s = 'Silent
+  type RequestSupport s :: Bool
+  type RequestSupport s = 'False
 
   -- | 'delimiter' is the character that separates argument strings in
   -- combined string representation. For example, arguments in the CLI
@@ -295,10 +286,7 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
   usageInfo :: s r -> Builder
 
 -- | A class for schemes that support human-readable help output.
---
--- NOTE: In order to define a 'SupportsHelp' instance for some @Scheme
--- s@, @HelpSupport s@ must be set to 'Helpful'.
-class (Scheme s, HelpSupport s ~ 'Helpful) => SupportsHelp s where
+class (Scheme s, RequestSupport s ~ 'True) => SupportsHelp s where
   makeHelpInfo :: ParseTree s r -> [Token s] -> Text -> Text -> Text
 
 --------------------------------------------------------------------------------
@@ -331,29 +319,29 @@ deriving instance Scheme s => Eq (StreamState s)
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
-data family HelpContinuation (cap :: HelpCapability) (s :: Type -> Type) r
+data family ReqContinuation (cap :: Bool) (s :: Type -> Type) r
 
-data instance HelpContinuation 'Silent s r
-  = NoHelp
+data instance ReqContinuation 'False s r
+  = NoRequests
   deriving (Functor)
 
-newtype instance HelpContinuation 'Helpful s r
-  = OnHelp (StreamState s -> r)
+newtype instance ReqContinuation 'True s r
+  = OnRequest (StreamState s -> r)
   deriving (Functor)
 
 -- | A handler for when help is requested.
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
-type HelpHandler s r = HelpContinuation (HelpSupport s) s r
+type RequestHandler s r = ReqContinuation (RequestSupport s) s r
 
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.
 data StreamHandler s a r = StreamHandler
-  { onSuccess     :: StreamState s -> a -> r -- ^ Success Continuation
-  , onEmpty       :: StreamState s -> r -- ^ Empty continuation
-  , onFailure     :: StreamState s -> Builder -> r -- ^ Failure Continuation
-  , onHelpRequest :: HelpHandler s r -- ^ Help Continuation
+  { onSuccess :: StreamState s -> a -> r -- ^ Success Continuation
+  , onEmpty   :: StreamState s -> r -- ^ Empty continuation
+  , onFailure :: StreamState s -> Builder -> r -- ^ Failure Continuation
+  , onRequest :: RequestHandler s r -- ^ Request Continuation
   }
 
 -- | The amazing stream parsing monad! This monad tracks the stream
@@ -410,10 +398,10 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: HelpSupport s ~ 'Helpful => StreamParser s a
-requestHelp = StreamParser $ \handler state ->
-  case onHelpRequest handler of
-    OnHelp h -> h state
+request :: RequestSupport s ~ 'True => StreamParser s a
+request = StreamParser $ \handler state ->
+  case onRequest handler of
+    OnRequest h -> h state
 
 -- | Get a list representing the current context stack.
 getContext :: StreamParser s [Token s]

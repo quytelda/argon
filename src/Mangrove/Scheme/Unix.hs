@@ -113,27 +113,27 @@ data UnixScheme r
   -- | A named option that might support suboptions
   | Option !OptionInfo (ParseTree SubScheme r)
   -- | A special option that requests help information
-  | HelpOption !OptionInfo
+  | RequestOption !OptionInfo
   deriving (Functor)
 
 instance Valency UnixScheme where
   valency (Parameter _)       = Just 1
   valency (Command _ subtree) = fmap (+1) (valency subtree)
   valency (Option _ subtree)  = fmap (max 2) (valency subtree)
-  valency (HelpOption _)      = Just 1
+  valency (RequestOption _)      = Just 1
 
 instance Resolve UnixScheme where
   resolve (Parameter (TextParser hint _)) =
     ExpectedError [render hint]
   resolve (Option info _) =
     ExpectedError [render $ optHead info]
-  resolve (HelpOption info) =
+  resolve (RequestOption info) =
     ExpectedError [render $ optHead info]
   resolve (Command info _) =
     ExpectedError [render $ cmdHead info]
 
 instance Separable UnixScheme where
-  separate p@(HelpOption _) = Exhibit Nothing [Modal True p]
+  separate p@(RequestOption _) = Exhibit Nothing [Modal True p]
   separate (Command info subtree) =
     Exhibit Nothing $ (Modal False <$> maybeToList mregular) <> modals
     where
@@ -170,7 +170,7 @@ instance Scheme UnixScheme where
     | UnixOption Flag (Maybe Text)
     deriving (Eq, Show)
 
-  type HelpSupport UnixScheme = 'Helpful
+  type RequestSupport UnixScheme = 'True
 
   delimiter _ = ' '
 
@@ -224,7 +224,7 @@ instance Scheme UnixScheme where
           runArgumentParser' subtree (initState args)
           (curry pure)
           (throwError . render)
-          NoHelp
+          NoRequests
 
     withContext (UnixOption flag mbound) $ do
       -- If a bound argument (e.g. --floop=blah) is provided, we
@@ -259,7 +259,7 @@ instance Scheme UnixScheme where
           (_, result) <- parseSubargs []
           pure result
 
-  activate (HelpOption info) = do
+  activate (RequestOption info) = do
     -- Arguments should never be interpreted as options when escaped.
     getEscaped >>= guard . not
 
@@ -268,7 +268,7 @@ instance Scheme UnixScheme where
     pop_
 
     withContext (UnixOption flag mbound)
-      requestHelp
+      request
 
   activate (Command info subtree) = do
     -- Arguments should never be interpreted as commands when escaped.
@@ -295,7 +295,7 @@ instance Scheme UnixScheme where
           separator = case flag of
                         LongFlag _ -> "="
                         _          -> ""
-  usageInfo (HelpOption info) =
+  usageInfo (RequestOption info) =
     render (optHead info)
 
 instance Render (Token UnixScheme) where
@@ -331,7 +331,7 @@ addHelpOptions
 addHelpOptions flags desc tree = ParseNode helpOption <|> go tree
   where
     helpOption :: UnixScheme a
-    helpOption = HelpOption $ OptionInfo flags desc
+    helpOption = RequestOption $ OptionInfo flags desc
 
     go :: ParseTree UnixScheme a -> ParseTree UnixScheme a
     go (ParseNode (Command info subtree)) =
@@ -376,7 +376,7 @@ collectOptions tree = go tree mempty
        -> Map [CommandInfo] [OptionHelp]
     go (ParseNode (Option info subtree)) =
       Map.insertWith (<>) [] [makeOptionHelp info subtree]
-    go (ParseNode (HelpOption info)) =
+    go (ParseNode (RequestOption info)) =
       Map.insertWith (<>) [] [makeOptionHelp info empty]
     go (ParseNode (Command info subtree)) =
       Map.union $ Map.mapKeys (info :) $ collectOptions subtree
