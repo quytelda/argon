@@ -117,9 +117,9 @@ runHelpfulParser'
   -> StreamState s -- ^ Initial stream state
   -> Result s r
 runHelpfulParser' info tree state =
-  runArgumentParser' tree state Success Failure (OnHelp _onHelpRequest)
+  runArgumentParser' tree state Success Failure (OnHelp _onRequest)
   where
-    _onHelpRequest state' =
+    _onRequest state' =
       Help $ makeHelpInfo tree (streamContext state') (programName info) (programDesc info)
 
 -- | A variant of 'runHelpfulParser' that treats help requests as
@@ -130,9 +130,9 @@ runHelpfulParser_
   -> [Text] -- ^ Input arguments
   -> Result s r
 runHelpfulParser_ tree args =
-  runArgumentParser' tree (argsToState args) Success Failure (OnHelp _onHelpRequest)
+  runArgumentParser' tree (argsToState args) Success Failure (OnHelp _onRequest)
   where
-    _onHelpRequest state' = Failure $
+    _onRequest state' = Failure $
       formatError (streamContext state') "help requested"
 
 -- | Parse the command line arguments passed to the program, then
@@ -197,5 +197,5 @@ runArgumentParser' tree state cok cerr hhelp =
       { onSuccess = _onSuccess
       , onFailure = _onFailure
       , onEmpty = flip _onFailure "empty"
-      , onHelpRequest = hhelp
+      , onRequest = hhelp
       }

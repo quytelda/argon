@@ -350,10 +350,10 @@ type HelpHandler s r = HelpContinuation (HelpSupport s) s r
 -- | A collection of continuations to be called for each situation a
 -- stream parser might encounter.
 data StreamHandler s a r = StreamHandler
-  { onSuccess     :: StreamState s -> a -> r -- ^ Success Continuation
-  , onEmpty       :: StreamState s -> r -- ^ Empty continuation
-  , onFailure     :: StreamState s -> Builder -> r -- ^ Failure Continuation
-  , onHelpRequest :: HelpHandler s r -- ^ Help Continuation
+  { onSuccess :: StreamState s -> a -> r -- ^ Success Continuation
+  , onEmpty   :: StreamState s -> r -- ^ Empty continuation
+  , onFailure :: StreamState s -> Builder -> r -- ^ Failure Continuation
+  , onRequest :: HelpHandler s r -- ^ Help Continuation
   }
 
 -- | The amazing stream parsing monad! This monad tracks the stream
@@ -412,7 +412,7 @@ getEscaped = StreamParser $ \handler state ->
 -- further operations.
 requestHelp :: HelpSupport s ~ 'Helpful => StreamParser s a
 requestHelp = StreamParser $ \handler state ->
-  case onHelpRequest handler of
+  case onRequest handler of
     OnHelp h -> h state
 
 -- | Get a list representing the current context stack.
