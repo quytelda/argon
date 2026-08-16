@@ -3,6 +3,7 @@
 
 import           Control.Applicative
 import           Data.Text           (Text)
+import           Data.Version
 import           Mangrove
 import           Mangrove.Unix
 
@@ -62,7 +63,7 @@ parseMode = cmd_commit <|> cmd_pull
 -- | This record encapsulates all our programs runtime options.
 data Settings = Settings
   { settingVerbose :: Bool
-  , settingMode :: Mode
+  , settingMode    :: Mode
   } deriving (Show)
 
 parseSettings :: UnixParser Settings
@@ -81,9 +82,10 @@ parseSettings =
 run :: Settings -> IO ()
 run = print
 
-programInfo :: ProgramInfo
+programInfo :: ProgramInfo s
 programInfo = ProgramInfo
   { programName = "myvcs"
+  , programVersion = makeVersion [0, 1, 2, 3]
   , programDesc = "Track and synchronize version history"
   }
 

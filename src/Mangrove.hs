@@ -10,7 +10,8 @@ Module      : Mangrove
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
-This module contains an API (types and functions) for running argument parsers.
+This module contains types and functions necessary for running
+argument parsers.
 -}
 module Mangrove
   ( -- * Standard Interface
@@ -21,8 +22,9 @@ module Mangrove
   , ParseTree
   , Scheme
   , Result(..)
-  , SupportsHelp
+  , SupportsResponse
   , StreamState
+  , RequestType(..)
   , RequestHandler
   , ReqContinuation(..)
 
@@ -52,25 +54,19 @@ import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Text
 
--- | Program metadata for displaying help output.
-data ProgramInfo = ProgramInfo
-  { programName :: !Text -- ^ The program name
-  , programDesc :: !Text -- ^ A description of the program
-  } deriving (Show)
-
 -- | The results of a parsing operation.
 --
--- Only parsing schemes that support generating help output will yield
--- 'Help' values.
+-- Only parsing schemes that support generating responses can use the
+-- 'Response' constructor.
 data Result s r where
   -- | A successful parsing operation yields a list of leftover
   -- arguments and a result value.
   Success :: ![Text] -> !r -> Result s r
   -- | A failed parsing operation yields an error message.
   Failure :: !Text -> Result s r
-  -- | A request for help yields human-readable help output (for
+  -- | A request for information yields a human-readable response (for
   -- parsers that support it).
-  Help :: SupportsHelp s => !Text -> Result s r
+  Response :: SupportsResponse s => !Text -> Result s r
 
 deriving instance Show r => Show (Result s r)
 deriving instance Eq r => Eq (Result s r)
@@ -80,7 +76,7 @@ argsToState :: [Text] -> StreamState s
 argsToState args = StreamState args [] False
 
 -- | Attempt to parse a value of type @r@ from a list of arguments,
--- where the parser @ParseTree s r@ doesn't support help output.
+-- where the parser @ParseTree s r@ doesn't support requests.
 runSilentParser
   :: (Scheme s, RequestSupport s ~ 'False)
   => ParseTree s r -- ^ Argument parser
@@ -99,10 +95,10 @@ runSilentParser' tree state =
   runArgumentParser' tree state Success Failure NoRequests
 
 -- | Attempt to parse a value of type @r@ from a list of arguments,
--- where the parser @ParseTree s r@ supports help output.
+-- where the parser @ParseTree s r@ supports requests.
 runHelpfulParser
-  :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  :: SupportsResponse s
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> Result s r
@@ -111,39 +107,42 @@ runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
 -- | A more general form of 'runHelpfulParser' that accepts a custom
 -- stream starting state.
 runHelpfulParser'
-  :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  :: SupportsResponse s
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> StreamState s -- ^ Initial stream state
   -> Result s r
 runHelpfulParser' info tree state =
   runArgumentParser' tree state Success Failure (OnRequest _onRequest)
   where
-    _onRequest state' =
-      Help $ makeHelpInfo tree (streamContext state') (programName info) (programDesc info)
+    _onRequest state' HelpRequest =
+      Response $ makeHelpInfo tree (streamContext state') info
+    _onRequest _ VersionRequest =
+      Response $ makeVersionInfo info
 
--- | A variant of 'runHelpfulParser' that treats help requests as
--- failures.
+-- | A variant of 'runHelpfulParser' that treats requests as failures.
+--
+-- This is useful if you know that no requests will ever be made.
 runHelpfulParser_
-  :: SupportsHelp s
+  :: SupportsResponse s
   => ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> Result s r
 runHelpfulParser_ tree args =
   runArgumentParser' tree (argsToState args) Success Failure (OnRequest _onRequest)
   where
-    _onRequest state' = Failure $
+    _onRequest state' _ = Failure $
       formatError (streamContext state') "help requested"
 
 -- | Parse the command line arguments passed to the program, then
 -- invoke the program's entrypoint with the results of the parsing. If
 -- parsing fails, we instead display an error to stderr and exit.
--- Alternatively, if help was requested, we abandon parsing and print
--- the relevant help output to stdout, then exit without indicating an
--- error.
+-- Alternatively, if information was requested, we abandon parsing and
+-- print the relevant response to stdout, then exit without indicating
+-- an error.
 parseArguments
-  :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  :: SupportsResponse s
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> (r -> IO a) -- ^ Program Entrypoint
   -> IO a
@@ -157,7 +156,7 @@ parseArguments info tree action = do
     Failure err -> do
       TIO.hPutStrLn stderr err
       exitFailure
-    Help output -> do
+    Response output -> do
       TIO.putStr output
       exitSuccess
 
@@ -169,7 +168,7 @@ runArgumentParser
   -> [Text] -- ^ Input arguments
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
-  -> RequestHandler s a -- ^ Help request handler
+  -> RequestHandler s a -- ^ Request handler
   -> a
 runArgumentParser tree = runArgumentParser' tree . argsToState
 
@@ -181,7 +180,7 @@ runArgumentParser'
   -> StreamState s -- ^ Initial stream state
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
-  -> RequestHandler s a -- ^ Help request handler
+  -> RequestHandler s a -- ^ Request handler
   -> a
 runArgumentParser' tree state cok cerr hhelp =
   runStreamParser (satiate tree) handler state

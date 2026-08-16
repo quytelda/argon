@@ -5,6 +5,7 @@ module General (spec) where
 
 import           Control.Applicative
 
+import           Data.Version
 import           Test.Hspec
 
 import           Mangrove
@@ -113,19 +114,24 @@ optionSpec = do
           `shouldBe` Success [] "value=asdf"
 
   describe "help options" $ do
-    let progInfo = ProgramInfo "example" "description"
-        isHelpResult (Help _) = True
-        isHelpResult _        = False
+    let progInfo = ProgramInfo
+          { programName = "example"
+          , programVersion = makeVersion [1,0]
+          , programDesc = "description"
+          } :: ProgramInfo s
+
+        isResponse (Response {}) = True
+        isResponse _             = False
 
     context "when a help option is present" $ do
       it "requests help" $ do
         runHelpfulParser progInfo (withHelp opt_example_unit) ["--help"]
-          `shouldSatisfy` isHelpResult
+          `shouldSatisfy` isResponse
       it "works for subcommands" $ do
         runHelpfulParser progInfo (withHelp cmd_example_tree) ["example", "--help"]
-          `shouldSatisfy` isHelpResult
+          `shouldSatisfy` isResponse
         runHelpfulParser progInfo (withHelp cmd_example_tree) ["example", "asdf", "--help"]
-          `shouldSatisfy` isHelpResult
+          `shouldSatisfy` isResponse
 
     context "when a help option is absent" $ do
       it "doesn't request help" $ do

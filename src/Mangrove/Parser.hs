@@ -44,7 +44,8 @@ module Mangrove.Parser
 
     -- * Parsing Schemes
   , Scheme(..)
-  , SupportsHelp(..)
+  , ProgramInfo(..)
+  , SupportsResponse(..)
 
     -- * Stream Parser
   , StreamParser(..)
@@ -53,7 +54,8 @@ module Mangrove.Parser
   , RequestHandler
   , ReqContinuation(..)
 
-    -- ** Help
+    -- ** Requests
+  , RequestType(..)
   , request
 
     -- ** Escaping
@@ -84,6 +86,7 @@ import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
+import           Data.Version
 
 import           Mangrove.Resolve
 import           Mangrove.Separable
@@ -259,8 +262,11 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
   -- string under this parsing scheme.
   data Token s
 
-  -- | This type indicates whether a parsing scheme supports help
-  -- output.
+  -- | This type indicates whether a parsing scheme accepts requests
+  -- for information.
+  --
+  -- When @RequestSupport scheme@ is @True@, a 'SupportsResponse'
+  -- instance should be provided for @scheme@.
   type RequestSupport s :: Bool
   type RequestSupport s = 'False
 
@@ -285,9 +291,18 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
   -- parser.
   usageInfo :: s r -> Builder
 
--- | A class for schemes that support human-readable help output.
-class (Scheme s, RequestSupport s ~ 'True) => SupportsHelp s where
-  makeHelpInfo :: ParseTree s r -> [Token s] -> Text -> Text -> Text
+-- | Program metadata for displaying help output.
+data ProgramInfo (s :: Type -> Type) = ProgramInfo
+  { programName    :: !Text -- ^ The program name
+  , programVersion :: !Version -- ^ The program version
+  , programDesc    :: !Text -- ^ A description of the program
+  } deriving (Show)
+
+-- | A class for schemes that support human-readable responses to
+-- requests for help or version information.
+class (Scheme s, RequestSupport s ~ 'True) => SupportsResponse s where
+  makeVersionInfo :: ProgramInfo s -> Text
+  makeHelpInfo :: ParseTree s r -> [Token s] -> ProgramInfo s -> Text
 
 --------------------------------------------------------------------------------
 -- Stream Parser
@@ -315,7 +330,13 @@ data StreamState s = StreamState
 deriving instance Scheme s => Show (StreamState s)
 deriving instance Scheme s => Eq (StreamState s)
 
--- | A handler for when help is requested.
+-- | What information is being requested?
+data RequestType
+  = VersionRequest -- ^ A request for version information
+  | HelpRequest -- ^ A request for help and usage information
+  deriving (Eq, Show)
+
+-- | A handler for when information is requested.
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
@@ -326,10 +347,10 @@ data instance ReqContinuation 'False s r
   deriving (Functor)
 
 newtype instance ReqContinuation 'True s r
-  = OnRequest (StreamState s -> r)
+  = OnRequest (StreamState s -> RequestType -> r)
   deriving (Functor)
 
--- | A handler for when help is requested.
+-- | A handler for when information is requested.
 --
 -- This will hold a continuation function for helpful parsing
 -- schemes, or a placeholder value for silent schemes.
@@ -345,8 +366,8 @@ data StreamHandler s a r = StreamHandler
   }
 
 -- | The amazing stream parsing monad! This monad tracks the stream
--- state and context. It short-circuits when exceptions or
--- help-requests are raised.
+-- state and context. It short-circuits when exceptions or requests
+-- are raised.
 newtype StreamParser s a = StreamParser
   { runStreamParser
     :: forall r. StreamHandler s a r
@@ -396,12 +417,12 @@ getEscaped :: StreamParser s Bool
 getEscaped = StreamParser $ \handler state ->
   onSuccess handler state (streamEscaped state)
 
--- | Signal that help information is requested. Short-circuits any
--- further operations.
-request :: RequestSupport s ~ 'True => StreamParser s a
-request = StreamParser $ \handler state ->
+-- | Signal that information is requested. Short-circuits any further
+-- operations.
+request :: RequestSupport s ~ 'True => RequestType -> StreamParser s a
+request requestType = StreamParser $ \handler state ->
   case onRequest handler of
-    OnRequest h -> h state
+    OnRequest h -> h state requestType
 
 -- | Get a list representing the current context stack.
 getContext :: StreamParser s [Token s]
