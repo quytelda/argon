@@ -41,9 +41,9 @@ module Mangrove
   , runArgumentParser'
   ) where
 
-import           Data.Text           (Text)
-import qualified Data.Text           as T
-import qualified Data.Text.IO        as TIO
+import           Data.Text          (Text)
+import qualified Data.Text          as T
+import qualified Data.Text.IO       as TIO
 import           System.Environment
 import           System.Exit
 import           System.IO
@@ -51,12 +51,6 @@ import           System.IO
 import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Text
-
--- | Program metadata for displaying help output.
-data ProgramInfo = ProgramInfo
-  { programName :: !Text -- ^ The program name
-  , programDesc :: !Text -- ^ A description of the program
-  } deriving (Show)
 
 -- | The results of a parsing operation.
 --
@@ -102,7 +96,7 @@ runSilentParser' tree state =
 -- where the parser @ParseTree s r@ supports help output.
 runHelpfulParser
   :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> Result s r
@@ -112,15 +106,17 @@ runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
 -- stream starting state.
 runHelpfulParser'
   :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> StreamState s -- ^ Initial stream state
   -> Result s r
 runHelpfulParser' info tree state =
   runArgumentParser' tree state Success Failure (OnHelp _onHelpRequest)
   where
-    _onHelpRequest state' =
-      Help $ makeHelpInfo tree (streamContext state') (programName info) (programDesc info)
+    _onHelpRequest state' ShowHelp =
+      Help $ makeHelpInfo tree (streamContext state') info
+    _onHelpRequest _ ShowVersion =
+      Help $ makeVersionInfo info
 
 -- | A variant of 'runHelpfulParser' that treats help requests as
 -- failures.
@@ -132,7 +128,7 @@ runHelpfulParser_
 runHelpfulParser_ tree args =
   runArgumentParser' tree (argsToState args) Success Failure (OnHelp _onHelpRequest)
   where
-    _onHelpRequest state' = Failure $
+    _onHelpRequest state' _ = Failure $
       formatError (streamContext state') "help requested"
 
 -- | Parse the command line arguments passed to the program, then
@@ -143,7 +139,7 @@ runHelpfulParser_ tree args =
 -- error.
 parseArguments
   :: SupportsHelp s
-  => ProgramInfo -- ^ Program metadata
+  => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> (r -> IO a) -- ^ Program Entrypoint
   -> IO a

@@ -44,6 +44,7 @@ import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
+import           Data.Version
 
 import           Mangrove
 import           Mangrove.Parser
@@ -113,27 +114,27 @@ data UnixScheme r
   -- | A named option that might support suboptions
   | Option !OptionInfo (ParseTree SubScheme r)
   -- | A special option that requests help information
-  | HelpOption !OptionInfo
+  | HelpOption !OptionInfo !HelpBehavior
   deriving (Functor)
 
 instance Valency UnixScheme where
   valency (Parameter _)       = Just 1
   valency (Command _ subtree) = fmap (+1) (valency subtree)
   valency (Option _ subtree)  = fmap (max 2) (valency subtree)
-  valency (HelpOption _)      = Just 1
+  valency (HelpOption _ _)    = Just 1
 
 instance Resolve UnixScheme where
   resolve (Parameter (TextParser hint _)) =
     ExpectedError [render hint]
   resolve (Option info _) =
     ExpectedError [render $ optHead info]
-  resolve (HelpOption info) =
+  resolve (HelpOption info _) =
     ExpectedError [render $ optHead info]
   resolve (Command info _) =
     ExpectedError [render $ cmdHead info]
 
 instance Separable UnixScheme where
-  separate p@(HelpOption _) = Exhibit Nothing [Modal True p]
+  separate p@(HelpOption _ _) = Exhibit Nothing [Modal True p]
   separate (Command info subtree) =
     Exhibit Nothing $ (Modal False <$> maybeToList mregular) <> modals
     where
@@ -259,7 +260,7 @@ instance Scheme UnixScheme where
           (_, result) <- parseSubargs []
           pure result
 
-  activate (HelpOption info) = do
+  activate (HelpOption info behavior) = do
     -- Arguments should never be interpreted as options when escaped.
     getEscaped >>= guard . not
 
@@ -267,8 +268,8 @@ instance Scheme UnixScheme where
     guard $ flag `elem` optFlags info
     pop_
 
-    withContext (UnixOption flag mbound)
-      requestHelp
+    withContext (UnixOption flag mbound) $
+      requestHelp behavior
 
   activate (Command info subtree) = do
     -- Arguments should never be interpreted as commands when escaped.
@@ -295,7 +296,7 @@ instance Scheme UnixScheme where
           separator = case flag of
                         LongFlag _ -> "="
                         _          -> ""
-  usageInfo (HelpOption info) =
+  usageInfo (HelpOption info _) =
     render (optHead info)
 
 instance Render (Token UnixScheme) where
@@ -306,13 +307,20 @@ instance Render (Token UnixScheme) where
   render (UnixOption f@(ShortFlag _) (Just v)) = render f <> render v
 
 instance SupportsHelp UnixScheme where
-  makeHelpInfo tree context name desc = renderText
+  makeVersionInfo info = renderText
+    $ render (programName info)
+    <> " version "
+    <> renderVersion (programVersion info)
+    where
+      renderVersion = TLB.fromString . showVersion
+
+  makeHelpInfo tree context info = renderText
     $ "Usage:\n"
     <> renderUsages tree <> "\n"
-    <> render desc <> "\n"
+    <> render (programDesc info) <> "\n"
     <> renderHelp tree context
     where
-      renderUsageLine s = render name <> " " <> render s <> "\n"
+      renderUsageLine s = render (programName info) <> " " <> render s <> "\n"
       renderUsages = foldMap renderUsageLine . exhibitToList . separate
 
 -- | Convenient type alias for Unix-flavored parse trees.
@@ -331,7 +339,7 @@ addHelpOptions
 addHelpOptions flags desc tree = ParseNode helpOption <|> go tree
   where
     helpOption :: UnixScheme a
-    helpOption = HelpOption $ OptionInfo flags desc
+    helpOption = HelpOption (OptionInfo flags desc) ShowHelp
 
     go :: ParseTree UnixScheme a -> ParseTree UnixScheme a
     go (ParseNode (Command info subtree)) =
@@ -376,7 +384,7 @@ collectOptions tree = go tree mempty
        -> Map [CommandInfo] [OptionHelp]
     go (ParseNode (Option info subtree)) =
       Map.insertWith (<>) [] [makeOptionHelp info subtree]
-    go (ParseNode (HelpOption info)) =
+    go (ParseNode (HelpOption info _)) =
       Map.insertWith (<>) [] [makeOptionHelp info empty]
     go (ParseNode (Command info subtree)) =
       Map.union $ Map.mapKeys (info :) $ collectOptions subtree

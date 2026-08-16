@@ -45,12 +45,14 @@ module Mangrove.Parser
     -- * Parsing Schemes
   , Scheme(..)
   , HelpCapability(..)
+  , ProgramInfo(..)
   , SupportsHelp(..)
 
     -- * Stream Parser
   , StreamParser(..)
   , StreamHandler(..)
   , StreamState(..)
+  , HelpBehavior(..)
   , HelpHandler
   , HelpContinuation(..)
 
@@ -85,6 +87,7 @@ import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
+import           Data.Version
 
 import           Mangrove.Resolve
 import           Mangrove.Separable
@@ -294,12 +297,20 @@ class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => 
   -- parser.
   usageInfo :: s r -> Builder
 
+-- | Program metadata for displaying help output.
+data ProgramInfo (s :: Type -> Type) = ProgramInfo
+  { programName    :: !Text -- ^ The program name
+  , programVersion :: !Version -- ^ The program version
+  , programDesc    :: !Text -- ^ A description of the program
+  } deriving (Show)
+
 -- | A class for schemes that support human-readable help output.
 --
 -- NOTE: In order to define a 'SupportsHelp' instance for some @Scheme
 -- s@, @HelpSupport s@ must be set to 'Helpful'.
 class (Scheme s, HelpSupport s ~ 'Helpful) => SupportsHelp s where
-  makeHelpInfo :: ParseTree s r -> [Token s] -> Text -> Text -> Text
+  makeVersionInfo :: ProgramInfo s -> Text
+  makeHelpInfo :: ParseTree s r -> [Token s] -> ProgramInfo s -> Text
 
 --------------------------------------------------------------------------------
 -- Stream Parser
@@ -327,6 +338,12 @@ data StreamState s = StreamState
 deriving instance Scheme s => Show (StreamState s)
 deriving instance Scheme s => Eq (StreamState s)
 
+-- | How should the program respond to this help request?
+data HelpBehavior
+  = ShowVersion -- ^ Display version informaion
+  | ShowHelp -- ^ Display help and usage information
+  deriving (Eq, Show)
+
 -- | A handler for when help is requested.
 --
 -- This will hold a continuation function for helpful parsing
@@ -338,7 +355,7 @@ data instance HelpContinuation 'Silent s r
   deriving (Functor)
 
 newtype instance HelpContinuation 'Helpful s r
-  = OnHelp (StreamState s -> r)
+  = OnHelp (StreamState s -> HelpBehavior -> r)
   deriving (Functor)
 
 -- | A handler for when help is requested.
@@ -410,10 +427,10 @@ getEscaped = StreamParser $ \handler state ->
 
 -- | Signal that help information is requested. Short-circuits any
 -- further operations.
-requestHelp :: HelpSupport s ~ 'Helpful => StreamParser s a
-requestHelp = StreamParser $ \handler state ->
+requestHelp :: HelpSupport s ~ 'Helpful => HelpBehavior -> StreamParser s a
+requestHelp behavior = StreamParser $ \handler state ->
   case onHelpRequest handler of
-    OnHelp h -> h state
+    OnHelp h -> h state behavior
 
 -- | Get a list representing the current context stack.
 getContext :: StreamParser s [Token s]
