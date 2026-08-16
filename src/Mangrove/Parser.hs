@@ -297,7 +297,8 @@ data ProgramInfo (s :: Type -> Type) = ProgramInfo
 
 -- | A class for schemes that support human-readable help output.
 class (Scheme s, RequestSupport s ~ 'True) => SupportsHelp s where
-  makeHelpInfo :: ParseTree s r -> [Token s] -> Text -> Text -> Text
+  makeVersionInfo :: ProgramInfo s -> Text
+  makeHelpInfo :: ParseTree s r -> [Token s] -> ProgramInfo s -> Text
 
 --------------------------------------------------------------------------------
 -- Stream Parser

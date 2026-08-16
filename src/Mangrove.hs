@@ -114,9 +114,9 @@ runHelpfulParser' info tree state =
   runArgumentParser' tree state Success Failure (OnRequest _onRequest)
   where
     _onRequest state' HelpRequest =
-      Help $ makeHelpInfo tree (streamContext state') (programName info) (programDesc info)
+      Help $ makeHelpInfo tree (streamContext state') info
     _onRequest _ VersionRequest =
-      Help "Version requests aren't implemented yet"
+      Help $ makeVersionInfo info
 
 -- | A variant of 'runHelpfulParser' that treats help requests as
 -- failures.

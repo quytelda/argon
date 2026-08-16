@@ -44,6 +44,7 @@ import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
+import           Data.Version
 
 import           Mangrove
 import           Mangrove.Parser
@@ -306,13 +307,20 @@ instance Render (Token UnixScheme) where
   render (UnixOption f@(ShortFlag _) (Just v)) = render f <> render v
 
 instance SupportsHelp UnixScheme where
-  makeHelpInfo tree context name desc = renderText
+  makeVersionInfo info = renderText
+    $ render (programName info)
+    <> " version "
+    <> renderVersion (programVersion info)
+    where
+      renderVersion = TLB.fromString . showVersion
+
+  makeHelpInfo tree context info = renderText
     $ "Usage:\n"
     <> renderUsages tree <> "\n"
-    <> render desc <> "\n"
+    <> render (programDesc info) <> "\n"
     <> renderHelp tree context
     where
-      renderUsageLine s = render name <> " " <> render s <> "\n"
+      renderUsageLine s = render (programName info) <> " " <> render s <> "\n"
       renderUsages = foldMap renderUsageLine . exhibitToList . separate
 
 -- | Convenient type alias for Unix-flavored parse trees.
