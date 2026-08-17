@@ -24,6 +24,7 @@ module Mangrove.Unix
   , option
   , optionPure
   , switch
+  , requestOption
   , command
   , subparameter
   , suboption
@@ -37,7 +38,7 @@ import           Data.List.NonEmpty   (NonEmpty)
 import           Data.Text            (Text)
 
 import           Mangrove.Parser
-import           Mangrove.Scheme.Sub  (SubScheme, SubParser)
+import           Mangrove.Scheme.Sub  (SubParser, SubScheme)
 import qualified Mangrove.Scheme.Sub  as Sub
 import           Mangrove.Scheme.Unix
 import           Mangrove.TextParser
@@ -71,6 +72,18 @@ optionPure flags help = option flags help . pure
 -- otherwise.
 switch :: NonEmpty Flag -> Text -> UnixParser Bool
 switch flags help = optionPure flags help True <|> pure False
+
+-- | A special option that triggers a request for information.
+--
+-- When a request option is encountered in the command line, a
+-- "request" is raised and parsing is abandoned in favor of yielding a
+-- human-readable response.
+requestOption
+  :: NonEmpty Flag
+  -> Text
+  -> RequestType
+  -> UnixParser a
+requestOption flags help = ParseNode . RequestOption (OptionInfo flags help)
 
 -- | Define a CLI subcommand with it's own parsing subtree.
 command
