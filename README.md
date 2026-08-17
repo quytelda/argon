@@ -361,14 +361,24 @@ $ ./mkuser --uid=InvalidNumber bilbo
 Currently, our CLI interface is missing something important: an option
 for displaying help and usage information. Let's create a new
 `Settings` parser that recognizes `--help` as a request for help
-information.
+information. While we're at it, we will also add a `--version` option
+that displays the program's version.
 
 ```haskell
 parseSettings' :: UnixParser Settings
-parseSettings' = addHelpOptions ["--help"]
-                 "Display help and usage information"
-                 parseSettings
+parseSettings' = opt_help <|> opt_version <|> parseSettings
+  where
+    opt_help =
+      requestOption ["--help"]
+      "Display help and usage information"
+      HelpRequest
+    opt_version =
+      requestOption ["--version"]
+      "Display program version"
+      VersionRequest
+```
 
+```haskell
 main :: IO ()
 main = parseArguments programInfo parseSettings' run
 ```
@@ -390,12 +400,20 @@ Create user accounts
 -u  --uid     INT          Specify a user ID
 ```
 
-__NOTE__: If an interface defines any commands (see below),
-`addHelpOptions` will add a help option at the root of the parse tree
-as well as the root of every command subtree. This is so that you can
-invoke `myprogram --help` to get general help or `myprogram
-somecommand --help` to get help information specifically for
-`somecommand`.
+Meanwhile the `--version` option just prints program's version:
+
+```
+./mkuser --version
+mkuser version 0.1.2.3
+```
+
+__NOTE__: Programs that support subcommands will usually want to add a
+help option for each subcommand as well as at the root. There is a
+helper function for this: `addHelpOptions` will construct a help
+option at the root parse tree as well as at the root of each
+subcommand's parse tree. Then you can invoke `myprogram --help` to get
+general help or `myprogram somecommand --help` to get help information
+specifically for `somecommand`.
 
 ## Hints
 
