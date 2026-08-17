@@ -3,6 +3,7 @@
 
 import           Control.Applicative
 import           Data.Text           (Text)
+import           Data.Version
 import           Mangrove
 import           Mangrove.Unix
 
@@ -70,11 +71,15 @@ parseSettings' = addHelpOptions ["--help"]
                  parseSettings
 
 -- | Here we define some metadata for our program. This information
--- will be used for displaying help output and usage information if
+-- will be used for displaying version or help/usage information, if
 -- necessary.
-programInfo :: ProgramInfo
+--
+-- Here the type variable @s@ is a phantom type that we can leave
+-- undetermined.
+programInfo :: ProgramInfo s
 programInfo = ProgramInfo
   { programName = "mkuser" -- The name of the program
+  , programVersion = makeVersion [0, 1, 2, 3] -- The program version is "0.1.2.3"
   , programDesc = "Create user accounts" -- A short description of the program
   }
 
