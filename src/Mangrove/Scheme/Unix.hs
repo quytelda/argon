@@ -311,6 +311,7 @@ instance SupportsResponse UnixScheme where
     $ render (programName info)
     <> " version "
     <> renderVersion (programVersion info)
+    <> "\n"
     where
       renderVersion = TLB.fromString . showVersion
 
