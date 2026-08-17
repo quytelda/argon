@@ -10,7 +10,8 @@ Module      : Mangrove
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
-This module contains an API (types and functions) for running argument parsers.
+This module contains types and functions necessary for running
+argument parsers.
 -}
 module Mangrove
   ( -- * Standard Interface
@@ -55,8 +56,8 @@ import           Mangrove.Text
 
 -- | The results of a parsing operation.
 --
--- Only parsing schemes that support generating help output will yield
--- 'Response' values.
+-- Only parsing schemes that support generating responses can use the
+-- 'Response' constructor.
 data Result s r where
   -- | A successful parsing operation yields a list of leftover
   -- arguments and a result value.
@@ -75,7 +76,7 @@ argsToState :: [Text] -> StreamState s
 argsToState args = StreamState args [] False
 
 -- | Attempt to parse a value of type @r@ from a list of arguments,
--- where the parser @ParseTree s r@ doesn't support help output.
+-- where the parser @ParseTree s r@ doesn't support requests.
 runSilentParser
   :: (Scheme s, RequestSupport s ~ 'False)
   => ParseTree s r -- ^ Argument parser
@@ -94,7 +95,7 @@ runSilentParser' tree state =
   runArgumentParser' tree state Success Failure NoRequests
 
 -- | Attempt to parse a value of type @r@ from a list of arguments,
--- where the parser @ParseTree s r@ supports help output.
+-- where the parser @ParseTree s r@ supports requests.
 runHelpfulParser
   :: SupportsResponse s
   => ProgramInfo s -- ^ Program metadata
@@ -119,8 +120,9 @@ runHelpfulParser' info tree state =
     _onRequest _ VersionRequest =
       Response $ makeVersionInfo info
 
--- | A variant of 'runHelpfulParser' that treats help requests as
--- failures.
+-- | A variant of 'runHelpfulParser' that treats requests as failures.
+--
+-- This is useful if you know that no requests will ever be made.
 runHelpfulParser_
   :: SupportsResponse s
   => ParseTree s r -- ^ Argument parser
@@ -135,9 +137,9 @@ runHelpfulParser_ tree args =
 -- | Parse the command line arguments passed to the program, then
 -- invoke the program's entrypoint with the results of the parsing. If
 -- parsing fails, we instead display an error to stderr and exit.
--- Alternatively, if help was requested, we abandon parsing and print
--- the relevant help output to stdout, then exit without indicating an
--- error.
+-- Alternatively, if information was requested, we abandon parsing and
+-- print the relevant response to stdout, then exit without indicating
+-- an error.
 parseArguments
   :: SupportsResponse s
   => ProgramInfo s -- ^ Program metadata
@@ -166,7 +168,7 @@ runArgumentParser
   -> [Text] -- ^ Input arguments
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
-  -> RequestHandler s a -- ^ Help request handler
+  -> RequestHandler s a -- ^ Request handler
   -> a
 runArgumentParser tree = runArgumentParser' tree . argsToState
 
@@ -178,7 +180,7 @@ runArgumentParser'
   -> StreamState s -- ^ Initial stream state
   -> ([Text] -> r -> a) -- ^ Success handler
   -> (Text -> a) -- ^ Failure handler
-  -> RequestHandler s a -- ^ Help request handler
+  -> RequestHandler s a -- ^ Request handler
   -> a
 runArgumentParser' tree state cok cerr hhelp =
   runStreamParser (satiate tree) handler state

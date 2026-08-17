@@ -113,7 +113,7 @@ data UnixScheme r
   | Command !CommandInfo (ParseTree UnixScheme r)
   -- | A named option that might support suboptions
   | Option !OptionInfo (ParseTree SubScheme r)
-  -- | A special option that requests help information
+  -- | A special option that raises a request for information
   | RequestOption !OptionInfo !RequestType
   deriving (Functor)
 
