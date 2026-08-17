@@ -63,12 +63,20 @@ parseSettings =
   <*> (opt_groups <|> pure [])
   <*> prm_name
 
--- | Here we add a `--help` option to our parser that will trigger
--- help output.
+-- | Here we add a @--help@ option to our parser that will trigger
+-- help output and @--version@ option that will print version
+-- information.
 parseSettings' :: UnixParser Settings
-parseSettings' = addHelpOptions ["--help"]
-                 "Display help and usage information"
-                 parseSettings
+parseSettings' = opt_help <|> opt_version <|> parseSettings
+  where
+    opt_help =
+      requestOption ["--help"]
+      "Display help and usage information"
+      HelpRequest
+    opt_version =
+      requestOption ["--version"]
+      "Display program version"
+      VersionRequest
 
 -- | Here we define some metadata for our program. This information
 -- will be used for displaying version or help/usage information, if
