@@ -125,7 +125,7 @@ data StreamResult r
 
 -- | Sink the results of a 'StreamParser' into a data type for easier inspection.
 runStreamParser'
-  :: SupportsHelp s
+  :: SupportsResponse s
   => StreamParser s r
   -> StreamState s
   -> (StreamState s, StreamResult r)

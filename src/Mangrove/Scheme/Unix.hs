@@ -306,7 +306,7 @@ instance Render (Token UnixScheme) where
   render (UnixOption f@(LongFlag _) (Just v))  = render f <> "=" <> render v
   render (UnixOption f@(ShortFlag _) (Just v)) = render f <> render v
 
-instance SupportsHelp UnixScheme where
+instance SupportsResponse UnixScheme where
   makeVersionInfo info = renderText
     $ render (programName info)
     <> " version "

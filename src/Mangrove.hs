@@ -21,7 +21,7 @@ module Mangrove
   , ParseTree
   , Scheme
   , Result(..)
-  , SupportsHelp
+  , SupportsResponse
   , StreamState
   , RequestHandler
   , ReqContinuation(..)
@@ -64,7 +64,7 @@ data Result s r where
   Failure :: !Text -> Result s r
   -- | A request for information yields a human-readable response (for
   -- parsers that support it).
-  Response :: SupportsHelp s => !Text -> Result s r
+  Response :: SupportsResponse s => !Text -> Result s r
 
 deriving instance Show r => Show (Result s r)
 deriving instance Eq r => Eq (Result s r)
@@ -95,7 +95,7 @@ runSilentParser' tree state =
 -- | Attempt to parse a value of type @r@ from a list of arguments,
 -- where the parser @ParseTree s r@ supports help output.
 runHelpfulParser
-  :: SupportsHelp s
+  :: SupportsResponse s
   => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
@@ -105,7 +105,7 @@ runHelpfulParser info tree = runHelpfulParser' info tree . argsToState
 -- | A more general form of 'runHelpfulParser' that accepts a custom
 -- stream starting state.
 runHelpfulParser'
-  :: SupportsHelp s
+  :: SupportsResponse s
   => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> StreamState s -- ^ Initial stream state
@@ -121,7 +121,7 @@ runHelpfulParser' info tree state =
 -- | A variant of 'runHelpfulParser' that treats help requests as
 -- failures.
 runHelpfulParser_
-  :: SupportsHelp s
+  :: SupportsResponse s
   => ParseTree s r -- ^ Argument parser
   -> [Text] -- ^ Input arguments
   -> Result s r
@@ -138,7 +138,7 @@ runHelpfulParser_ tree args =
 -- the relevant help output to stdout, then exit without indicating an
 -- error.
 parseArguments
-  :: SupportsHelp s
+  :: SupportsResponse s
   => ProgramInfo s -- ^ Program metadata
   -> ParseTree s r -- ^ Argument parser
   -> (r -> IO a) -- ^ Program Entrypoint

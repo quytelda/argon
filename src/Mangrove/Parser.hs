@@ -45,7 +45,7 @@ module Mangrove.Parser
     -- * Parsing Schemes
   , Scheme(..)
   , ProgramInfo(..)
-  , SupportsHelp(..)
+  , SupportsResponse(..)
 
     -- * Stream Parser
   , StreamParser(..)
@@ -295,8 +295,9 @@ data ProgramInfo (s :: Type -> Type) = ProgramInfo
   , programDesc    :: !Text -- ^ A description of the program
   } deriving (Show)
 
--- | A class for schemes that support human-readable help output.
-class (Scheme s, RequestSupport s ~ 'True) => SupportsHelp s where
+-- | A class for schemes that support human-readable responses to
+-- requests for help or version information.
+class (Scheme s, RequestSupport s ~ 'True) => SupportsResponse s where
   makeVersionInfo :: ProgramInfo s -> Text
   makeHelpInfo :: ParseTree s r -> [Token s] -> ProgramInfo s -> Text
 
