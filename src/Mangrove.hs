@@ -23,6 +23,7 @@ module Mangrove
   , Result(..)
   , SupportsResponse
   , StreamState
+  , RequestType(..)
   , RequestHandler
   , ReqContinuation(..)
 
