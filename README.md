@@ -177,8 +177,8 @@ arguments:
    "--uid" and "-u". `Flag` is an instance of `IsString`, so we can
    just write the string representation instead of `LongFlag "uid"`
    and `ShortFlag 'u'`.
-2. A human readable description. This will be displayed when help
-   output is triggered.
+2. A human readable description. This will be displayed in response to
+   a help request.
 3. A subparser tree (`SubParser r`) that will parse any subparameters or
    suboptions. In this case, we declare a single subparameter (an
    integer).
@@ -303,9 +303,10 @@ The last thing we need to define before running our parser is a
 structure with some metadata about the program:
 
 ```haskell
-programInfo :: ProgramInfo
+programInfo :: ProgramInfo s
 programInfo = ProgramInfo
   { programName = "mkuser" -- The name of the program
+  , programVersion = makeVersion [0, 1, 2, 3] -- The program version is "0.1.2.3"
   , programDesc = "Create user accounts" -- A short description of the program
   }
 ```
@@ -324,11 +325,11 @@ main :: IO ()
 main = parseArguments programInfo parseSettings run
 ```
 
-`parseArguments` takes three arguments: the program metadata (for help
-output), a `UnixParser r`, and a function of type `r -> IO a`. When
-the parser completes successfully, this function will be called with
-the result. Otherwise, `parseArguments` will print error messages or
-help information as appropriate, and then exit.
+`parseArguments` takes three arguments: the program metadata (for
+help/version output), a `UnixParser r`, and a function of type `r ->
+IO a`. When the parser completes successfully, this function will be
+called with the result. Otherwise, `parseArguments` will print error
+messages or help/version information as appropriate, and then exit.
 
 If you want to run an argument parser without using `IO`, or you want
 to pass your own argument list, check out `runHelpfulParser` from
