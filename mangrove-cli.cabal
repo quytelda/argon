@@ -32,7 +32,6 @@ library
       Mangrove.Resolve
       Mangrove.Scheme.Sub
       Mangrove.Scheme.Unix
-      Mangrove.Separable
       Mangrove.Text
       Mangrove.TextParser
       Mangrove.Unix

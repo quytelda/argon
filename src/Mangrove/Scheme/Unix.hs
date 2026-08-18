@@ -45,13 +45,13 @@ import qualified Data.Text              as T
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
 import           Data.Version
+import           Data.Void
 
 import           Mangrove
 import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Scheme.Sub    (SubScheme)
 import qualified Mangrove.Scheme.Sub    as Sub
-import           Mangrove.Separable
 import           Mangrove.Text
 import           Mangrove.TextParser
 import           Mangrove.Valency
@@ -132,14 +132,6 @@ instance Resolve UnixScheme where
     ExpectedError [render $ optHead info]
   resolve (Command info _) =
     ExpectedError [render $ cmdHead info]
-
-instance Separable UnixScheme where
-  separate p@(RequestOption {}) = Exhibit Nothing [Modal True p]
-  separate (Command info subtree) =
-    Exhibit Nothing $ (Modal False <$> maybeToList mregular) <> modals
-    where
-      Exhibit mregular modals = Command info <$> separate subtree
-  separate p = Exhibit (Just p) []
 
 -- | A parser for interpreting options. An option always begins with a
 -- flag, followed optionally by an "=" sign and a bound argument. The
@@ -306,6 +298,90 @@ instance Render (Token UnixScheme) where
   render (UnixOption f@(LongFlag _) (Just v))  = render f <> "=" <> render v
   render (UnixOption f@(ShortFlag _) (Just v)) = render f <> render v
 
+-- | A factored group of subtrees (branches) representing different
+-- usage modes.
+data Usages a = Usages
+  [ParseTree UnixScheme Void]      -- ^ Request branches
+  (Maybe (ParseTree UnixScheme a)) -- ^ Uncategorized branch
+  [ParseTree UnixScheme a]         -- ^ Command branches
+
+-- | Factor a 'ParseTree' into several independant subtrees
+-- (branches), potentially filtered to specific commands.
+--
+-- Each branch can be thought of as corresponding to one particular
+-- mode of operation, in that it contains at least one command or
+-- option that conflicts with commands or options in other branches.
+--
+-- We can select only branches that correspond to a particular
+-- subcommand by passing the components of that subcommand as a list:
+--
+-- > decomposeTree tree [] -- No filtering
+-- > decomposeTree tree ["stash", "list"] -- Select "stash list" command
+decomposeTree :: ParseTree UnixScheme r -> [Text] -> Usages r
+decomposeTree (ParseNode (RequestOption info requestType)) commands =
+  -- If we're currently searching for a specific command, then
+  -- this request option is irrelevant.
+  let node = ParseNode (RequestOption info requestType)
+  in Usages (if null commands then [node] else []) Nothing []
+
+decomposeTree (ParseNode (Command info subtree)) commands
+  | commandMismatch =
+    -- We are looking for a specific command and it's not this
+    -- one, so don't return any trees.
+    Usages [] Nothing []
+  | otherwise =
+    -- Either this is the command we're looking for, or we're not
+    -- looking for a command.
+    let Usages req misc cmd = decomposeTree subtree (drop 1 commands)
+        req' = ParseNode . Command info <$> req
+        cmd' = ParseNode . Command info <$> maybeToList misc <> cmd
+    in Usages req' Nothing cmd'
+  where
+    commandMismatch =
+      case commands of
+        (command : _) -> not $ command `elem` cmdNames info
+        []            -> False
+
+decomposeTree (SumNode l r) commands =
+  let Usages reqLs miscL cmdLs = decomposeTree l commands
+      Usages reqRs miscR cmdRs = decomposeTree r commands
+
+      -- When both subtrees yield uncategorized branches, then we
+      -- want to sum them normally. However, if only one subtree
+      -- yields an uncategorized branch, we can just replace sum
+      -- with that branch.
+      misc = liftA2 SumNode miscL miscR
+             <|> miscL
+             <|> miscR
+  in Usages (reqLs <> reqRs) misc (cmdLs <> cmdRs)
+
+decomposeTree (ProdNode f l r) commands =
+  let Usages reqLs miscL cmdLs = decomposeTree l commands
+      Usages reqRs miscR cmdRs = decomposeTree r commands
+      prod = ProdNode f
+
+      -- Requests prevent any further parsing, so if one of the
+      -- subtrees yields request branches, the other subtree is
+      -- irrelevant. If somehow both subtrees yield request
+      -- branches, then a product node behaves effectively like a
+      -- sum node because we could never actually trigger both
+      -- requests.
+      reqs = reqRs <> reqLs
+      misc = liftA2 prod miscL miscR
+      cmds = liftA2 prod (maybeToList miscL) cmdRs <>
+             liftA2 prod cmdLs (maybeToList miscR)
+  in Usages reqs misc cmds
+
+decomposeTree tree _ = Usages [] (Just tree) []
+
+formatUsages :: Text -> Usages r -> Builder
+formatUsages progName (Usages reqs misc cmds) =
+  mconcat
+  $ List.intersperse "\n"
+  $ map (\t -> TLB.fromText progName <> " " <> render t) usageModes
+  where
+    usageModes = map vacuous reqs <> maybeToList misc <> cmds
+
 instance SupportsResponse UnixScheme where
   makeVersionInfo info = renderText
     $ render (programName info)
@@ -317,12 +393,12 @@ instance SupportsResponse UnixScheme where
 
   makeHelpInfo tree context info = renderText
     $ "Usage:\n"
-    <> renderUsages tree <> "\n"
+    <> formatUsages (programName info) usages <> "\n\n"
     <> render (programDesc info) <> "\n"
     <> renderHelp tree context
     where
-      renderUsageLine s = render (programName info) <> " " <> render s <> "\n"
-      renderUsages = foldMap renderUsageLine . exhibitToList . separate
+      commandContext = [cmd | UnixCommand cmd <- context]
+      usages = decomposeTree tree commandContext
 
 -- | Convenient type alias for Unix-flavored parse trees.
 type UnixParser = ParseTree UnixScheme

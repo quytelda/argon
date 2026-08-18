@@ -81,7 +81,6 @@ import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
 import qualified Data.List              as List
-import           Data.Maybe
 import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy         as TL
@@ -89,7 +88,6 @@ import qualified Data.Text.Lazy.Builder as TLB
 import           Data.Version
 
 import           Mangrove.Resolve
-import           Mangrove.Separable
 import           Mangrove.Text
 import           Mangrove.Valency
 
@@ -226,31 +224,6 @@ instance (Valency s, Scheme s) => Render (ParseTree s r) where
 
   -- Constant nodes that don't accept input have no usage.
   render _ = ""
-
-instance (Separable s, Valency s) => Separable (ParseTree s) where
-  separate (SumNode l r) = Exhibit norm (modalsL <> modalsR)
-    where
-      Exhibit normL modalsL = separate l
-      Exhibit normR modalsR = separate r
-      norm = liftA2 SumNode normL normR
-             <|> normL
-             <|> normR
-  separate (ProdNode f l r) = Exhibit norm modals
-    where
-      Exhibit normL modalsL = separate l
-      Exhibit normR modalsR = separate r
-      node = ProdNode f
-      norm = liftA2 node normL normR
-      cross g modalTrees normalTrees =
-        [ g (if usesTerseOutput m && isOptional n then empty else n) <$> m
-        | m <- modalTrees
-        , n <- normalTrees
-        ]
-      modals = cross (flip node) modalsL (maybeToList normR)
-               <> cross node modalsR (maybeToList normL)
-               <> [liftA2 node u v | u <- modalsL, v <- modalsR]
-  separate (ParseNode p) = ParseNode <$> separate p
-  separate n = Exhibit (Just n) []
 
 --------------------------------------------------------------------------------
 -- Parsing Schemes
