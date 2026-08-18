@@ -15,8 +15,24 @@ Structures for parsing text input, along with some default parsers.
 -}
 
 module Mangrove.TextParser
-  ( TextParser(..)
+  ( -- * TextParser
+    TextParser(..)
   , runTextParser
+
+    -- * Parsers for Common Types
+  , parseBool
+  , parseInt
+  , parseInteger
+  , parseWord
+  , parseChar
+  , parseFloat
+  , parseDouble
+  , parseText
+  , parseLazyText
+  , parseLazyTextBuilder
+  , parseString
+
+    -- * Automatic Parser Selection
   , DefaultParser(..)
   ) where
 
@@ -24,6 +40,7 @@ import           Control.Monad.Except
 import           Data.Bifunctor
 import           Data.Text              (Text)
 import qualified Data.Text              as T
+import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
 import qualified Data.Text.Read         as TR
 
@@ -55,65 +72,122 @@ exactly reader text =
     Right (result, "")  -> pure result
     Right (_, leftover) -> throwError $ "unexpected input: " <> leftover
 
+-- | Parses a boolean value. This parser accepts @"true"@, @"false"@,
+-- @"yes"@, or @"no"@ as input.
+parseBool :: TextParser Bool
+parseBool = TextParser
+  { parserHint = "BOOL"
+  , parserRun = parse
+  }
+  where
+    parse "true"  = pure True
+    parse "false" = pure False
+    parse "yes"   = pure True
+    parse "no"    = pure False
+    parse _       = throwError "expected true|false|yes|no"
+
 instance DefaultParser Bool where
-  defaultParser = TextParser
-    { parserHint = "BOOL"
-    , parserRun = parse
-    }
-    where
-      parse "true"  = pure True
-      parse "false" = pure False
-      parse "yes"   = pure True
-      parse "no"    = pure False
-      parse _       = throwError "expected true|false|yes|no"
+  defaultParser = parseBool
+
+-- | Parse a signed 'Int' value in base-10.
+parseInt :: TextParser Int
+parseInt = TextParser
+  { parserHint = "INT"
+  , parserRun = exactly TR.decimal
+  }
 
 instance DefaultParser Int where
-  defaultParser = TextParser
-    { parserHint = "INT"
-    , parserRun = exactly TR.decimal
-    }
+  defaultParser = parseInt
+
+-- | Parse a signed 'Integer' value in base-10.
+parseInteger :: TextParser Integer
+parseInteger = TextParser
+  { parserHint = "INT"
+  , parserRun = exactly TR.decimal
+  }
 
 instance DefaultParser Integer where
-  defaultParser = TextParser
-    { parserHint = "INT"
-    , parserRun = exactly TR.decimal
-    }
+  defaultParser = parseInteger
+
+-- | Parse an unsigned `Word` value in base-10.
+parseWord :: TextParser Word
+parseWord = TextParser
+  { parserHint = "INT"
+  , parserRun = exactly TR.decimal
+  }
 
 instance DefaultParser Word where
-  defaultParser = TextParser
-    { parserHint = "INT"
-    , parserRun = exactly TR.decimal
-    }
+  defaultParser = parseWord
+
+-- | Parse exactly one character. If the input is longer than 1 character, the parser fails.
+parseChar :: TextParser Char
+parseChar = TextParser
+  { parserHint = "CHAR"
+  , parserRun = parse
+  }
+  where
+    parse (T.unpack -> [c]) = pure c
+    parse _                 = throwError "input contains multiple characters"
 
 instance DefaultParser Char where
-  defaultParser = TextParser
-    { parserHint = "CHAR"
-    , parserRun = parse
-    }
-    where
-      parse (T.unpack -> [c]) = pure c
-      parse _                 = throwError "input contains multiple characters"
+  defaultParser = parseChar
+
+-- | Parse a floating point value in base-10.
+parseFloat :: TextParser Float
+parseFloat = TextParser
+  { parserHint = "FLOAT"
+  , parserRun = exactly TR.rational
+  }
 
 instance DefaultParser Float where
-  defaultParser = TextParser
-    { parserHint = "FLOAT"
-    , parserRun = exactly TR.rational
-    }
+  defaultParser = parseFloat
+
+-- | Parse a double width value in base-10.
+parseDouble :: TextParser Double
+parseDouble = TextParser
+  { parserHint = "DOUBLE"
+  , parserRun = exactly TR.rational
+  }
 
 instance DefaultParser Double where
-  defaultParser = TextParser
-    { parserHint = "DOUBLE"
-    , parserRun = exactly TR.rational
-    }
+  defaultParser = parseDouble
+
+-- | Parse a strict 'Text' value.
+--
+-- Since the input is already strict 'Text', this parser simply returns it for free.
+parseText :: TextParser Text
+parseText = TextParser
+  { parserHint = "STRING"
+  , parserRun = pure
+  }
 
 instance DefaultParser Text where
-  defaultParser = TextParser
-    { parserHint = "STRING"
-    , parserRun = pure
-    }
+  defaultParser = parseText
+
+parseLazyText :: TextParser TL.Text
+parseLazyText = TextParser
+  { parserHint = "STRING"
+  , parserRun = pure . TL.fromStrict
+  }
+
+instance DefaultParser TL.Text where
+  defaultParser = parseLazyText
+
+parseLazyTextBuilder :: TextParser TLB.Builder
+parseLazyTextBuilder = TextParser
+  { parserHint = "STRING"
+  , parserRun = pure . TLB.fromText
+  }
+
+instance DefaultParser TLB.Builder where
+  defaultParser = parseLazyTextBuilder
+
+-- | Parse a Haskell 'String' (i.e. @[Char]@) value.
+parseString :: TextParser String
+parseString = TextParser
+  { parserHint = "STRING"
+  , parserRun = pure . T.unpack
+  }
 
 instance DefaultParser String where
-  defaultParser = TextParser
-    { parserHint = "STRING"
-    , parserRun = pure . T.unpack
-    }
+  defaultParser = parseString
