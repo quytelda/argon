@@ -306,6 +306,44 @@ instance Render (Token UnixScheme) where
   render (UnixOption f@(LongFlag _) (Just v))  = render f <> "=" <> render v
   render (UnixOption f@(ShortFlag _) (Just v)) = render f <> render v
 
+data Usage a = Usage
+  (Maybe (ParseTree UnixScheme a))
+  [ParseTree UnixScheme a]
+  [ParseTree UnixScheme a]
+
+decomposeTree :: ParseTree UnixScheme r -> [Text] -> Usage r
+decomposeTree tree commands =
+  case tree of
+    ParseNode (RequestOption {}) -> Usage Nothing [tree] []
+    ParseNode (Command {}) -> Usage Nothing [] [tree]
+    ParseNode _ -> Usage (Just tree) [] []
+    SumNode l r ->
+      let Usage miscL reqLs cmdLs = decomposeTree l commands
+          Usage miscR reqRs cmdRs = decomposeTree r commands
+          misc = liftA2 SumNode miscL miscR
+                 <|> miscL
+                 <|> miscR
+      in Usage misc (reqLs <> reqRs) (cmdLs <> cmdRs)
+    ProdNode f l r ->
+      let Usage miscL reqLs cmdLs = decomposeTree l commands
+          Usage miscR reqRs cmdRs = decomposeTree r commands
+          prod = ProdNode f
+          misc = liftA2 prod miscL miscR
+          reqs = liftA2 prod [empty] reqRs <>
+                 liftA2 prod reqLs [empty]
+          cmds = liftA2 prod (maybeToList miscL) cmdRs <>
+                 liftA2 prod cmdLs (maybeToList miscR)
+      in Usage misc reqs cmds
+    node -> Usage (Just node) [] []
+
+fmtUsage :: Text -> Usage r -> Builder
+fmtUsage progName (Usage misc reqs cmds) =
+  mconcat
+  $ List.intersperse "\n"
+  $ map (\t -> TLB.fromText progName <> " " <> t)
+  $ map render usageModes
+  where usageModes = maybeToList misc <> reqs <> cmds
+
 instance SupportsResponse UnixScheme where
   makeVersionInfo info = renderText
     $ render (programName info)
@@ -317,12 +355,12 @@ instance SupportsResponse UnixScheme where
 
   makeHelpInfo tree context info = renderText
     $ "Usage:\n"
-    <> renderUsages tree <> "\n"
+    <> fmtUsage (programName info) (decomposeTree tree []) <> "\n"
     <> render (programDesc info) <> "\n"
     <> renderHelp tree context
-    where
-      renderUsageLine s = render (programName info) <> " " <> render s <> "\n"
-      renderUsages = foldMap renderUsageLine . exhibitToList . separate
+    -- where
+    --   renderUsageLine s = render (programName info) <> " " <> render s <> "\n"
+    --   renderUsages = foldMap renderUsageLine . exhibitToList . separate
 
 -- | Convenient type alias for Unix-flavored parse trees.
 type UnixParser = ParseTree UnixScheme
