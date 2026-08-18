@@ -314,15 +314,30 @@ data Usage a = Usage
 decomposeTree :: ParseTree UnixScheme r -> [Text] -> Usage r
 decomposeTree tree commands =
   case tree of
-    ParseNode (RequestOption {}) -> Usage Nothing [tree] []
-    ParseNode (Command info subtree) ->
-      let Usage misc req cmd = decomposeTree subtree commands
-          req' = ParseNode . Command info <$> req
-          cmd' = ParseNode . Command info <$> maybeToList misc <> cmd
-      in Usage Nothing req' cmd'
+    ParseNode (RequestOption {}) ->
+      -- If we're currently searching for a specific command, then
+      -- this request option is irrelevant.
+      Usage Nothing (if null commands then [tree] else []) []
+    ParseNode (Command info subtree)
+      | commandMismatch info ->
+        -- We are looking for a specific command and it's not this
+        -- one, so don't return any trees.
+        Usage Nothing [] []
+      | otherwise ->
+        -- Either this is the command we're looking for, or we're not
+        -- looking for a command.
+        let Usage misc req cmd = decomposeTree subtree (drop 1 commands)
+            req' = ParseNode . Command info <$> req
+            cmd' = ParseNode . Command info <$> maybeToList misc <> cmd
+        in Usage Nothing req' cmd'
     SumNode l r ->
       let Usage miscL reqLs cmdLs = decomposeTree l commands
           Usage miscR reqRs cmdRs = decomposeTree r commands
+
+          -- When both subtrees yield uncategorized branches, then we
+          -- want to sum them normally. However, if only one subtree
+          -- yields an uncategorized branch, we can just replace sum
+          -- with that branch.
           misc = liftA2 SumNode miscL miscR
                  <|> miscL
                  <|> miscR
@@ -331,6 +346,13 @@ decomposeTree tree commands =
       let Usage miscL reqLs cmdLs = decomposeTree l commands
           Usage miscR reqRs cmdRs = decomposeTree r commands
           prod = ProdNode f
+
+          -- Requests prevent any further parsing, so if one of the
+          -- subtrees yields request branches, the other subtree is
+          -- irrelevant. If somehow both subtrees yield request
+          -- branches, then a product node behaves effectively like a
+          -- sum node because we could never actually trigger both
+          -- requests.
           misc = liftA2 prod miscL miscR
           reqs = liftA2 prod [empty] reqRs <>
                  liftA2 prod reqLs [empty]
@@ -338,6 +360,11 @@ decomposeTree tree commands =
                  liftA2 prod cmdLs (maybeToList miscR)
       in Usage misc reqs cmds
     _ -> Usage (Just tree) [] []
+  where
+    commandMismatch info =
+      case commands of
+        (command : _) -> not $ command `elem` cmdNames info
+        []            -> False
 
 fmtUsage :: Text -> Usage r -> Builder
 fmtUsage progName (Usage misc reqs cmds) =
@@ -358,12 +385,11 @@ instance SupportsResponse UnixScheme where
 
   makeHelpInfo tree context info = renderText
     $ "Usage:\n"
-    <> fmtUsage (programName info) (decomposeTree tree []) <> "\n"
+    <> fmtUsage (programName info) (decomposeTree tree commandContext) <> "\n"
     <> render (programDesc info) <> "\n"
     <> renderHelp tree context
-    -- where
-    --   renderUsageLine s = render (programName info) <> " " <> render s <> "\n"
-    --   renderUsages = foldMap renderUsageLine . exhibitToList . separate
+    where
+      commandContext = [cmd | UnixCommand cmd <- context]
 
 -- | Convenient type alias for Unix-flavored parse trees.
 type UnixParser = ParseTree UnixScheme
