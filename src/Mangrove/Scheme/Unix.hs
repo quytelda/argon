@@ -315,8 +315,11 @@ decomposeTree :: ParseTree UnixScheme r -> [Text] -> Usage r
 decomposeTree tree commands =
   case tree of
     ParseNode (RequestOption {}) -> Usage Nothing [tree] []
-    ParseNode (Command {}) -> Usage Nothing [] [tree]
-    ParseNode _ -> Usage (Just tree) [] []
+    ParseNode (Command info subtree) ->
+      let Usage misc req cmd = decomposeTree subtree commands
+          req' = ParseNode . Command info <$> req
+          cmd' = ParseNode . Command info <$> maybeToList misc <> cmd
+      in Usage Nothing req' cmd'
     SumNode l r ->
       let Usage miscL reqLs cmdLs = decomposeTree l commands
           Usage miscR reqRs cmdRs = decomposeTree r commands
@@ -334,7 +337,7 @@ decomposeTree tree commands =
           cmds = liftA2 prod (maybeToList miscL) cmdRs <>
                  liftA2 prod cmdLs (maybeToList miscR)
       in Usage misc reqs cmds
-    node -> Usage (Just node) [] []
+    _ -> Usage (Just tree) [] []
 
 fmtUsage :: Text -> Usage r -> Builder
 fmtUsage progName (Usage misc reqs cmds) =
