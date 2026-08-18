@@ -45,6 +45,7 @@ import qualified Data.Text              as T
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
 import           Data.Version
+import           Data.Void
 
 import           Mangrove
 import           Mangrove.Parser
@@ -308,16 +309,17 @@ instance Render (Token UnixScheme) where
 
 data Usage a = Usage
   (Maybe (ParseTree UnixScheme a))
-  [ParseTree UnixScheme a]
+  [ParseTree UnixScheme Void]
   [ParseTree UnixScheme a]
 
 decomposeTree :: ParseTree UnixScheme r -> [Text] -> Usage r
 decomposeTree tree commands =
   case tree of
-    ParseNode (RequestOption {}) ->
+    ParseNode (RequestOption info requestType) ->
       -- If we're currently searching for a specific command, then
       -- this request option is irrelevant.
-      Usage Nothing (if null commands then [tree] else []) []
+      let node = ParseNode (RequestOption info requestType)
+      in Usage Nothing (if null commands then [node] else []) []
     ParseNode (Command info subtree)
       | commandMismatch info ->
         -- We are looking for a specific command and it's not this
@@ -354,8 +356,7 @@ decomposeTree tree commands =
           -- sum node because we could never actually trigger both
           -- requests.
           misc = liftA2 prod miscL miscR
-          reqs = liftA2 prod [empty] reqRs <>
-                 liftA2 prod reqLs [empty]
+          reqs = reqRs <> reqLs
           cmds = liftA2 prod (maybeToList miscL) cmdRs <>
                  liftA2 prod cmdLs (maybeToList miscR)
       in Usage misc reqs cmds
@@ -372,7 +373,7 @@ fmtUsage progName (Usage misc reqs cmds) =
   $ List.intersperse "\n"
   $ map (\t -> TLB.fromText progName <> " " <> t)
   $ map render usageModes
-  where usageModes = maybeToList misc <> reqs <> cmds
+  where usageModes = maybeToList misc <> map vacuous reqs <> cmds
 
 instance SupportsResponse UnixScheme where
   makeVersionInfo info = renderText
