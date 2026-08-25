@@ -6,7 +6,8 @@ accounts - we'll call it "mkuser". The goal will be to provide a
 command line interface with the following syntax:
 
 ```
-mkuser [--uid=INT] [--system] [--groups={GROUP...}] USERNAME
+mkuser [--uid=INT] [--system] [--groups={GROUP...}]
+  [--quota=[soft=INT],[hard=INT]] USERNAME
 ```
 
 This file is a literate Haskell program. That means it also is a valid
@@ -54,7 +55,14 @@ data Settings = Settings
   { userId     :: Maybe Int -- ^ An optional target user ID
   , userSystem :: Bool -- ^ Is this a system user?
   , userGroups :: [Text] -- ^ Groups the new user will be in
+  , userQuota  :: Maybe Quota -- ^ Disk usage quotas
   , userName   :: Text  -- ^ Username for the new user
+  } deriving (Show)
+
+-- | This record represents disk usage quota settings for a new user.
+data Quota = Quota
+  { quotaSoft :: Maybe Int -- ^ Limit new data after this point
+  , quotaHard :: Int -- ^ Hard upper limit on disk usage
   } deriving (Show)
 \end{code}
 
@@ -215,6 +223,60 @@ By using `some` instead of the similar function `many`, we have
 created a subparser that will fail if no subarguments are provided
 (e.g. `mkuser alice --groups`).
 
+Suboptions
+----------
+
+So far, we've seen options that accept any number of subparameters.
+But what if we need an option that accepts _structured_ data - not
+just a list of values, but key/value pairs? This is common in
+configuration and deployment tools. For example, a mount command might
+need to specify both a source and destination path, along with
+optional flags. Rather than forcing the user to remember exact
+positional order, suboptions use named pairs: `--mount
+src=/webroot,dst=/var/www,ro`.
+
+A suboption is a named key/value pair within a single option's
+arguments. Unlike positional subarguments (which are parsed in order),
+suboptions are identified by name, so they can appear in any order.
+Suboptions are separated by commas (just like positional
+subarguments), but each suboption has the syntax `key=value`. You can
+also mix suboptions with positional subarguments in the same option,
+and Mangrove will parse all of them together.
+
+When Mangrove begins parsing a list of subarguments for some option,
+it checks whether the parse tree contains any suboption parsers. If it
+does, Mangrove treats any subarguments that contain an `=` sign as
+key/value pairs rather than positional subarguments. This mechanism
+prevents confusion between the two parsing modes and ensures that
+suboptions and subparsers don't interfere with each other. If the
+parser subtree contains _no_ suboption parsers at all, Mangrove
+ignores the `=` sign and treats all subarguments as positional.
+
+Like regular options, suboptions can be optional or required. You can
+use the same Applicative combinators to express this: `optional` makes
+a suboption optional (returning `Nothing` if absent), and `<|>` allows
+you to provide a default value.
+
+Let's add a `--quota` option to our `mkuser` program for configuring a
+user's disk usage quota. `--quota` will accept two suboptions: `soft`
+and `hard`, for soft and hard space limits respectively. Each
+suboption is itself optional and accepts a single integer value.
+
+\begin{code}
+opt_quota :: UnixParser Quota
+opt_quota =
+  option ["--quota"]
+  "Set a disk usage quota"
+  $ Quota <$> subopt_soft
+          <*> subopt_hard
+  where
+    subopt_soft :: SubParser (Maybe Int)
+    subopt_soft = optional $ suboption "soft" defaultParser
+
+    subopt_hard :: SubParser Int
+    subopt_hard = suboption "hard" defaultParser <|> pure 512
+\end{code}
+
 Applicative
 -----------
 
@@ -241,6 +303,7 @@ parseSettings =
   <$> optional opt_uid
   <*> opt_system
   <*> (opt_groups <|> pure [])
+  <*> optional opt_quota
   <*> prm_name
 \end{code}
 
@@ -323,7 +386,13 @@ with different inputs:
 
 ```
 $ ./mkuser --system --groups audio,input bilbo
-Settings {userId = Nothing, userSystem = True, userGroups = ["audio","input"], userName = "bilbo"}
+Settings {userId = Nothing, userSystem = True, userGroups =
+["audio","input"], userQuota = Nothing, userName = "bilbo"}
+
+$ ./mkuser --quota soft=500,hard=600 frodo
+Settings {userId = Nothing, userSystem = False, userGroups = [],
+userQuota = Just (Quota {quotaSoft = Just 500, quotaHard = 600}),
+userName = "frodo"}
 
 $ ./mkuser --badinput
 unexpected --badinput
