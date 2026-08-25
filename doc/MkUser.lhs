@@ -103,11 +103,14 @@ usage information. It's traditional to use a single word in all-caps
 for this, like `PATH`, `STRING`, or `INPUT_FILE`.
 
 Mangrove provides text parsers for common types like `Int`, `Double`,
-`Text`, and `String` in the `Mangrove.TextParser` module. However, we
-can also let the compiler choose an appropriate text parser based on
-the type. `defaultParser :: DefaultParser a => TextParser a` is a
-polymorphic text parser that selects a reasonable parser
-implementation for any type with a `DefaultParser` instance.
+`Text`, and `String` in the `Mangrove.TextParser` module.
+Additionally, instead of manually specifying a parser for each type,
+we can rely on Haskell's type system to choose one automatically. The
+`defaultParser` function provides this capability: it's a polymorphic
+parser for any type that has a `DefaultParser` instance (such as the
+aforementioned common types). Thus, when `defaultParser` is used in a
+context where the type known, Haskell automatically selects the
+appropriate parser for that type.
 
 Positional Parameters
 ---------------------
@@ -123,36 +126,28 @@ would be parameters. If we invoke `substring 1 3 "example"`, we know
 that `START` is `1`, `END` is `3`, and `STRING` is `"example"` because
 of the order in which they appear.
 
-Our program will have just one parameter: a username. Here is how we
-define a parser for it:
+Our `mkuser` program only needs one positional parameter: a username.
+We define a parser for it using the `parameter` function, which
+converts a `TextParser` into a positional parameter parser. Because a
+`DefaultParser` instance exists for strict `Text`, we use
+`defaultParser`; however, we override the parser's hint (normally
+`"STRING"`) with `"USERNAME"` which is more descriptive.
 
 \begin{code}
 prm_name :: UnixParser Text
 prm_name = parameter (defaultParser {parserHint = "USERNAME"})
 \end{code}
 
-The `parameter` function creates a parameter parser from a
-`TextParser`. The `defaultParser` implementation for strict `Text` is
-chosen based on the required types, and we choose to override the
-default hint (normally `"STRING"`) with `"USERNAME"` which is more
-descriptive.
-
 Options
 -------
 
-An "option" represents a named input. Options consist of a flag
-followed by an optional subargument string.
-
-A "flag" is special symbol that signals the beginning of a particular
-option. Per UNIX tradition there are long flags (e.g. `--foo`) and
-short flags (e.g `-f`).
-
-To prevent ambiguity, sometimes an equals sign is used to separate a
-long flag from its subargument string (instead of a space). For
-example, `--uid=1000` is an option that begins with the `--uid` flag
-and is followed by the subargument string `1000`. Similarly, an
-option's short flag can be directly concatenated with its argument,
-e.g. `-u 1000` can be written `-u1000`.
+An "option" is a named input. It consists of a flag (like `--uid` or
+`-u`) followed by an optional subargument string. Per UNIX tradition,
+long flags use double dashes and short flags use a single dash. For
+long flags, the subargument can be separated by an equal sign
+(`--uid=1000`) or a space (`--uid 1000`). Short flags can be directly
+concatenated with their subargument (`-u1000`) or separated by a space
+(`-u 1000`).
 
 Let's define a parser for the `--uid` option, which allows the user to
 specify a user ID for the new user if they want. It should accept one
@@ -189,10 +184,14 @@ If we defined this without 'switch' it would look like this:
 Options with Multiple Subparameters
 -----------------------------------
 
-Let's deal with the `--groups` option. This option is a bit different
-from the `--uid` option because we want the user to be able to specify
-a list of groups for the new user to join. Thus, we want to create an
-option that accepts one or more subarguments.
+Now that we've seen options with no subarguments, and options with a
+single subargument, let's try defining an option that can accept
+multiple subarguments.
+
+The `--groups` option is a bit different from the `--uid` option
+because we want the user to be able to specify a list of groups for
+the new user to join. Thus, we want to create an option that accepts
+one or more subarguments.
 
 Thankfully, `SubParser` is also an `Alternative` instance. We can use
 `some` (from `Control.Applicative`) to convert a `SubParser r` into a
@@ -219,16 +218,21 @@ created a subparser that will fail if no subarguments are provided
 Applicative
 -----------
 
-You might notice that the `opt_uid` parser we constructed earlier has
-the type `UnixParser Int`, but to eventually construct a `Settings`,
-we really want a `Maybe Int`. That's because we haven't accounted for
-the fact that the `--uid` might not be present in the arguments.
-That's easy to fix using `optional` from `Control.Applicative`.
+You might notice that `opt_uid` has the type `UnixParser Int`, but our
+`Settings` record expects `Maybe Int`. That's because we need to
+handle the case where no `--uid` option appears in the arguments. The
+solution is to wrap the parser using `optional` from
+`Control.Applicative`: `optional opt_uid` attempts to parse the
+`--uid` option, returning `Nothing` if it's absent.
 
-For the `--groups` option, we should simply get an empty list when the
-option is missing.
+For `--groups`, we want slightly different behavior: if the user
+doesn't provide `--groups`, we should use an empty list instead of
+returning `Nothing`. We can express this using the `<|>` operator
+(i.e. the alternative operator): `opt_groups <|> pure []` means "try
+parsing `--groups`, and if that fails, just return an empty list."
 
-Now we can finally construct our `Settings` parser:
+Now we can finally construct our `Settings` parser using Applicative
+notation:
 
 \begin{code}
 parseSettings :: UnixParser Settings
@@ -249,11 +253,12 @@ option for displaying help and usage information. Let's create a new
 information. While we're at it, we can also add a `--version` option
 that displays the program's version.
 
-To accomplish this without cluttering up our `Settings` structure, we
-can use "request options". Request options are a special kind of
-option which represent a query for information about the system. When
-a request option is matched, the parser will abandon any further
-parsing and instead provide a human-readable response to the query.
+Some options, like `--help` and `--version`, don't produce values that
+go into our `Settings` record. Instead, they interrupt parsing to
+provide information (help text or version number) and exit. Mangrove
+calls these "request options". When a request option is matched,
+parsing stops immediately and Mangrove prints the requested
+information without trying to fill in the rest of `Settings`.
 
 There are currently 2 kinds of requests: `HelpRequests` and
 `VersionRequests`. A help request is a request for help and usage
@@ -287,7 +292,7 @@ details about the program. This metadata is passed in using a
 programInfo :: ProgramInfo s
 programInfo = ProgramInfo
   { programName = "mkuser" -- The name of the program
-  , programVersion = makeVersion [0, 1, 2, 3] -- The program version is "0.1.2.3"
+  , programVersion = makeVersion [0,1,2,3] -- The program version is "0.1.2.3"
   , programDesc = "Create user accounts" -- A short description of the program
   }
 \end{code}
