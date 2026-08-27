@@ -454,15 +454,15 @@ makeOptionHelp OptionInfo{..} subtree =
 -- | Enumerate descriptive information for all options available in a
 -- parse tree, indexed by the set of commands under which they exist.
 collectOptions :: ParseTree UnixScheme r -> Map [CommandInfo] [OptionHelp]
-collectOptions tree = go tree mempty
+collectOptions tree = go tree (Map.singleton [] [])
   where
     go :: ParseTree UnixScheme r
        -> Map [CommandInfo] [OptionHelp]
        -> Map [CommandInfo] [OptionHelp]
     go (ParseNode (Option info subtree)) =
-      Map.insertWith (<>) [] [makeOptionHelp info subtree]
+      Map.adjust (makeOptionHelp info subtree :) []
     go (ParseNode (RequestOption info _)) =
-      Map.insertWith (<>) [] [makeOptionHelp info empty]
+      Map.adjust (makeOptionHelp info empty :) []
     go (ParseNode (Command info subtree)) =
       Map.union $ Map.mapKeys (info :) $ collectOptions subtree
     go (ProdNode _ l r) = go r . go l
