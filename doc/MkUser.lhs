@@ -26,10 +26,8 @@ First of all, we will need to write lots of `NonEmpty` list and `Text`
 literals, so we'll enable some language extensions to make that
 easier.
 
-\begin{code}
-{-# LANGUAGE OverloadedLists   #-}
-{-# LANGUAGE OverloadedStrings #-}
-\end{code}
+> {-# LANGUAGE OverloadedLists   #-}
+> {-# LANGUAGE OverloadedStrings #-}
 
 Now let's import the modules we need. The building blocks for our
 parser are found in `Mangrove.Unix` while the functions for running
@@ -38,33 +36,29 @@ parsers live in the `Mangrove` module. We'll use combinators from
 `Text`, since Mangrove is built around `Text` rather than `String`.
 Finally, we'll use `Data.Version` when specifying program metadata.
 
-\begin{code}
-import           Control.Applicative
-import           Data.Text           (Text)
-import           Mangrove
-import           Mangrove.Unix
-import           Data.Version
-\end{code}
+> import           Control.Applicative
+> import           Data.Text           (Text)
+> import           Mangrove
+> import           Mangrove.Unix
+> import           Data.Version
 
 Next let's create a new record that captures the program's runtime
 configuration:
 
-\begin{code}
--- | This record encapsulates all our programs runtime options.
-data Settings = Settings
-  { userId     :: Maybe Int -- ^ An optional target user ID
-  , userSystem :: Bool -- ^ Is this a system user?
-  , userGroups :: [Text] -- ^ Groups the new user will be in
-  , userQuota  :: Maybe Quota -- ^ Disk usage quotas
-  , userName   :: Text  -- ^ Username for the new user
-  } deriving (Show)
+> -- | This record encapsulates all our programs runtime options.
+> data Settings = Settings
+>   { userId     :: Maybe Int -- ^ An optional target user ID
+>   , userSystem :: Bool -- ^ Is this a system user?
+>   , userGroups :: [Text] -- ^ Groups the new user will be in
+>   , userQuota  :: Maybe Quota -- ^ Disk usage quotas
+>   , userName   :: Text  -- ^ Username for the new user
+>   } deriving (Show)
 
--- | This record represents disk usage quota settings for a new user.
-data Quota = Quota
-  { quotaSoft :: Maybe Int -- ^ Limit new data after this point
-  , quotaHard :: Int -- ^ Hard upper limit on disk usage
-  } deriving (Show)
-\end{code}
+> -- | This record represents disk usage quota settings for a new user.
+> data Quota = Quota
+>   { quotaSoft :: Maybe Int -- ^ Limit new data after this point
+>   , quotaHard :: Int -- ^ Hard upper limit on disk usage
+>   } deriving (Show)
 
 Let's also pretend that our program's logic lives inside a function
 `run :: Settings -> IO ()`. We pass it the settings we want, and it
@@ -72,10 +66,8 @@ runs the program accordingly. However, since this is just an example
 program, we won't actually create any user accounts; instead we'll
 just have the program print its settings to `stdout`.
 
-\begin{code}
-run :: Settings -> IO ()
-run = print
-\end{code}
+> run :: Settings -> IO ()
+> run = print
 
 Parser Types
 ------------
@@ -141,10 +133,8 @@ converts a `TextParser` into a positional parameter parser. Because a
 `defaultParser`; however, we override the parser's hint (normally
 `"STRING"`) with `"USERNAME"` which is more descriptive.
 
-\begin{code}
-prm_name :: UnixParser Text
-prm_name = parameter (defaultParser {parserHint = "USERNAME"})
-\end{code}
+> prm_name :: UnixParser Text
+> prm_name = parameter (defaultParser {parserHint = "USERNAME"})
 
 Options
 -------
@@ -161,12 +151,10 @@ Let's define a parser for the `--uid` option, which allows the user to
 specify a user ID for the new user if they want. It should accept one
 subparameter, an integer UID.
 
-\begin{code}
-opt_uid :: UnixParser Int
-opt_uid = option ["--uid", "-u"]
-          "Specify a user ID"
-          $ subparameter defaultParser
-\end{code}
+> opt_uid :: UnixParser Int
+> opt_uid = option ["--uid", "-u"]
+>           "Specify a user ID"
+>           $ subparameter defaultParser
 
 Switches
 --------
@@ -176,10 +164,8 @@ subarguments - it is either present (`True`) or absent (`False`). This
 special type of option is a "switch", and we can use the `switch`
 function to create a parser:
 
-\begin{code}
-opt_system :: UnixParser Bool
-opt_system = switch ["--system", "-s"] "Create a system user"
-\end{code}
+> opt_system :: UnixParser Bool
+> opt_system = switch ["--system", "-s"] "Create a system user"
 
 If we defined this without 'switch' it would look like this:
 
@@ -205,13 +191,11 @@ Thankfully, `SubParser` is also an `Alternative` instance. We can use
 `some` (from `Control.Applicative`) to convert a `SubParser r` into a
 `SubParser [r]` that will expect to parse one or more `r` values.
 
-\begin{code}
-opt_groups :: UnixParser [Text]
-opt_groups =
-  option ["--groups", "-g"]
-  "Specify what groups the user is part of"
-  $ some $ subparameter defaultParser {parserHint = "GROUP"}
-\end{code}
+> opt_groups :: UnixParser [Text]
+> opt_groups =
+>   option ["--groups", "-g"]
+>   "Specify what groups the user is part of"
+>   $ some $ subparameter defaultParser {parserHint = "GROUP"}
 
 Mangrove recognizes that the subparser `some $ subparameter
 defaultParser :: SubParser [Text]` can consume multiple subarguments,
@@ -262,20 +246,18 @@ user's disk usage quota. `--quota` will accept two suboptions: `soft`
 and `hard`, for soft and hard space limits respectively. Each
 suboption is itself optional and accepts a single integer value.
 
-\begin{code}
-opt_quota :: UnixParser Quota
-opt_quota =
-  option ["--quota"]
-  "Set a disk usage quota"
-  $ Quota <$> subopt_soft
-          <*> subopt_hard
-  where
-    subopt_soft :: SubParser (Maybe Int)
-    subopt_soft = optional $ suboption "soft" defaultParser
+> opt_quota :: UnixParser Quota
+> opt_quota =
+>   option ["--quota"]
+>   "Set a disk usage quota"
+>   $ Quota <$> subopt_soft
+>           <*> subopt_hard
+>   where
+>     subopt_soft :: SubParser (Maybe Int)
+>     subopt_soft = optional $ suboption "soft" defaultParser
 
-    subopt_hard :: SubParser Int
-    subopt_hard = suboption "hard" defaultParser <|> pure 512
-\end{code}
+>     subopt_hard :: SubParser Int
+>     subopt_hard = suboption "hard" defaultParser <|> pure 512
 
 Applicative
 -----------
@@ -296,16 +278,14 @@ parsing `--groups`, and if that fails, just return an empty list."
 Now we can finally construct our `Settings` parser using Applicative
 notation:
 
-\begin{code}
-parseSettings :: UnixParser Settings
-parseSettings =
-  Settings
-  <$> optional opt_uid
-  <*> opt_system
-  <*> (opt_groups <|> pure [])
-  <*> optional opt_quota
-  <*> prm_name
-\end{code}
+> parseSettings :: UnixParser Settings
+> parseSettings =
+>   Settings
+>   <$> optional opt_uid
+>   <*> opt_system
+>   <*> (opt_groups <|> pure [])
+>   <*> optional opt_quota
+>   <*> prm_name
 
 Request Options
 ---------------
@@ -328,19 +308,17 @@ There are currently 2 kinds of requests: `HelpRequests` and
 information for our parser. A version request is for querying the
 program's version.
 
-\begin{code}
-parseSettings' :: UnixParser Settings
-parseSettings' = opt_help <|> opt_version <|> parseSettings
-  where
-    opt_help =
-      requestOption ["--help"]
-      "Display help and usage information"
-      HelpRequest
-    opt_version =
-      requestOption ["--version"]
-      "Display program version"
-      VersionRequest
-\end{code}
+> parseSettings' :: UnixParser Settings
+> parseSettings' = opt_help <|> opt_version <|> parseSettings
+>   where
+>     opt_help =
+>       requestOption ["--help"]
+>       "Display help and usage information"
+>       HelpRequest
+>     opt_version =
+>       requestOption ["--version"]
+>       "Display program version"
+>       VersionRequest
 
 Running the Parser
 ------------------
@@ -349,24 +327,20 @@ In order to display help or version information, Mangrove needs a few
 details about the program. This metadata is passed in using a
 `ProgramInfo` record:
 
-\begin{code}
--- Here the type variable @s@ is a phantom type that we can leave
--- undetermined.
-programInfo :: ProgramInfo s
-programInfo = ProgramInfo
-  { programName = "mkuser" -- The name of the program
-  , programVersion = makeVersion [0,1,2,3] -- The program version is "0.1.2.3"
-  , programDesc = "Create user accounts" -- A short description of the program
-  }
-\end{code}
+> -- Here the type variable @s@ is a phantom type that we can leave
+> -- undetermined.
+> programInfo :: ProgramInfo s
+> programInfo = ProgramInfo
+>   { programName = "mkuser" -- The name of the program
+>   , programVersion = makeVersion [0,1,2,3] -- The program version is "0.1.2.3"
+>   , programDesc = "Create user accounts" -- A short description of the program
+>   }
 
 The `parseArguments` function will run our parser with the arguments
 passed to our program by the operating system.
 
-\begin{code}
-main :: IO ()
-main = parseArguments programInfo parseSettings' run
-\end{code}
+> main :: IO ()
+> main = parseArguments programInfo parseSettings' run
 
 `parseArguments` takes three arguments: the program metadata, a
 parser, and a function of type `r -> IO a`. When the parser completes
