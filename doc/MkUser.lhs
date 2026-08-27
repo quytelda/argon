@@ -54,7 +54,7 @@ configuration:
 >   , userQuota  :: Maybe Quota -- ^ Disk usage quotas
 >   , userName   :: Text  -- ^ Username for the new user
 >   } deriving (Show)
-
+>
 > -- | This record represents disk usage quota settings for a new user.
 > data Quota = Quota
 >   { quotaSoft :: Maybe Int -- ^ Limit new data after this point
@@ -256,7 +256,7 @@ suboption is itself optional and accepts a single integer value.
 >   where
 >     subopt_soft :: SubParser (Maybe Int)
 >     subopt_soft = optional $ suboption "soft" defaultParser
-
+>
 >     subopt_hard :: SubParser Int
 >     subopt_hard = suboption "hard" defaultParser <|> pure 512
 
