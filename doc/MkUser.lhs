@@ -10,8 +10,9 @@ mkuser [--uid=INT] [--system] [--groups={GROUP...}]
   [--quota=[soft=INT],[hard=INT]] USERNAME
 ```
 
-This file is a literate Haskell program. That means it also is a valid
-Haskell program that you can compile:
+This tutorial exists as a literate Haskell program in the `doc`
+directory of the project's repository. That means it is also a valid
+Haskell source file that you can compile:
 
 ```
 $ stack exec ghc -- -o mkuser doc/MkUser.lhs
