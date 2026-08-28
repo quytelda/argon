@@ -31,6 +31,7 @@ module Mangrove.TextParser
   , parseLazyText
   , parseLazyTextBuilder
   , parseString
+  , parseFilePath
 
     -- * Automatic Parser Selection
   , DefaultParser(..)
@@ -191,3 +192,10 @@ parseString = TextParser
 
 instance DefaultParser String where
   defaultParser = parseString
+
+-- | Parser for 'FilePath's.
+--
+-- This is the same as 'parseString' but with a more specialized
+-- parser hint.
+parseFilePath :: TextParser FilePath
+parseFilePath = parseString { parserHint = "PATH" }
