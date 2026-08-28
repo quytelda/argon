@@ -8,6 +8,37 @@ and this project adheres to the
 
 ## Unreleased
 
+## 0.3.0.0 - 2026-08-27
+
+### Added
+
+- Request options that trigger a request when matched
+- Literate Haskell mkuser tutorial that demonstrates how to build
+  parsers for options and parameters
+- Literate Haskell pkgtool tutorial that demonstrates how to build
+  command parsers
+- Individual text parsers for common data types
+
+### Changed
+
+- Generalize help requests to help or version requests
+- Rewrite mkuser tutorial as a Literate Haskell program
+- Add version information to ProgramInfo
+- Move tutorials from the inside the README to dedicated pages on the
+  GitHub wiki which are built from Literate Haskell files in the `doc`
+  directory
+
+### Fixed
+
+- Include commands with no options in help output
+- Factor out duplicate code in Mangrove.Unix.optionPure
+
+### Removed
+
+- Separable module and Separable typeclass
+- Exhibit type
+- Modal type
+
 ## 0.2.0.0 - 2026-08-14
 
 ### Added

@@ -5,7 +5,7 @@ cabal-version: 2.2
 -- see: https://github.com/sol/hpack
 
 name:           mangrove-cli
-version:        0.2.0.0
+version:        0.3.0.0
 synopsis:       Build CLI argument parsers using Applicative.
 description:    Please see the README on GitHub at <https://github.com/quytelda/mangrove#readme>
 category:       CLI, Options, Parsing
