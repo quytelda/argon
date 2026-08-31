@@ -24,6 +24,7 @@ module Mangrove.Text
   , between
   , brackets
   , braces
+  , quotes
   , renderDelimitedIf
   , keyEqualsValue
 
@@ -86,6 +87,10 @@ brackets = between "[" "]"
 -- | Surround a string with curly braces.
 braces :: Builder -> Builder
 braces = between "{" "}"
+
+-- | Surround a string with double quotes.
+quotes :: Builder -> Builder
+quotes = between "\"" "\""
 
 -- | @renderDelimitedIf wrap f x@ will render @x@ as a 'Builder'. If
 -- the condition @f x@ is @True@, the result will be modified using
