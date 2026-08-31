@@ -153,7 +153,7 @@ parseDouble = TextParser
 instance DefaultParser Double where
   defaultParser = parseDouble
 
--- | Parse a strict 'Text' value.
+-- | Parse a strict 'T.Text' value.
 --
 -- Since the input is already strict 'Text', this parser simply returns it for free.
 parseText :: TextParser Text
@@ -165,6 +165,7 @@ parseText = TextParser
 instance DefaultParser Text where
   defaultParser = parseText
 
+-- | Parse a lazy 'TL.Text' value.
 parseLazyText :: TextParser TL.Text
 parseLazyText = TextParser
   { parserHint = "STRING"
@@ -174,6 +175,7 @@ parseLazyText = TextParser
 instance DefaultParser TL.Text where
   defaultParser = parseLazyText
 
+-- | Parse a lazy text 'TLB.Builder'.
 parseLazyTextBuilder :: TextParser TLB.Builder
 parseLazyTextBuilder = TextParser
   { parserHint = "STRING"
