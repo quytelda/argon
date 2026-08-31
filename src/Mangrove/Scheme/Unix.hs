@@ -497,8 +497,7 @@ renderHeader cmds@(info : _) =
   <> render (cmdHelp info)
   <> "\n"
   where
-    quote m = "\"" <> m <> "\""
-    fmtCommand = quote . render . T.unwords . fmap cmdHead . reverse
+    fmtCommand = quotes . render . T.unwords . fmap cmdHead . reverse
     aliases = NonEmpty.tail $ cmdNames info
     aliasInfo =
       if null aliases
