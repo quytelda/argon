@@ -51,5 +51,6 @@ tests:
     dependencies:
     - mangrove-cli
     - hspec >= 2.8.5 && < 3
+    - QuickCheck >= 2.14.2 && < 2.16
     build-tools:
     - hspec-discover >= 2.8.5 && < 3
