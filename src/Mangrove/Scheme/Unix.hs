@@ -117,6 +117,30 @@ data UnixScheme r
   | RequestOption !OptionInfo !RequestType
   deriving (Functor)
 
+instance Show (UnixScheme r) where
+  showsPrec p (Parameter tp) =
+    showParen (p >= 10)
+    $ showString "Parameter "
+    . showsTextParser tp
+  showsPrec p (Option info subtree) =
+    showParen (p >= 10)
+    $ showString "Option "
+    . showsPrec 11 info
+    . showString " "
+    . showsPrec 11 subtree
+  showsPrec p (Command info subtree) =
+    showParen (p >= 10)
+    $ showString "Command "
+    . showsPrec 11 info
+    . showString " "
+    . showsPrec 11 subtree
+  showsPrec p (RequestOption info reqType) =
+    showParen (p >= 10)
+    $ showString "RequestOption "
+    . showsPrec 11 info
+    . showString " "
+    . showsPrec 11 reqType
+
 instance Valency UnixScheme where
   valency (Parameter _)       = Just 1
   valency (Command _ subtree) = fmap (+1) (valency subtree)

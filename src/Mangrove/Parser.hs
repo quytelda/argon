@@ -7,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses     #-}
 {-# LANGUAGE OverloadedStrings         #-}
 {-# LANGUAGE PolymorphicComponents     #-}
+{-# LANGUAGE QuantifiedConstraints     #-}
 {-# LANGUAGE ScopedTypeVariables       #-}
 {-# LANGUAGE StandaloneDeriving        #-}
 {-# LANGUAGE TypeApplications          #-}
@@ -110,6 +111,34 @@ data ParseTree (scheme :: Type -> Type) (r :: Type) where
   SumNode :: ParseTree scheme r -> ParseTree scheme r -> ParseTree scheme r
   -- | Abstracts 'many' (@MaybeNode False@) and 'some' (@MaybeNode True@)
   ManyNode :: !Bool -> ParseTree scheme r -> ParseTree scheme [r]
+
+instance (forall a. Show (s a)) => Show (ParseTree s r) where
+  showsPrec _ EmptyNode = showString "EmptyNode"
+  showsPrec p (ValueNode _) =
+    showParen (p >= 10)
+    $ showString "ValueNode _"
+  showsPrec p (ParseNode s) =
+    showParen (p >= 10)
+    $ showString "ParseNode "
+    . showsPrec 11 s
+  showsPrec p (ProdNode _ l r) =
+    showParen (p >= 10)
+    $ showString "ProdNode _ "
+    . showsPrec 11 l
+    . showString " "
+    . showsPrec 11 r
+  showsPrec p (SumNode l r) =
+    showParen (p >= 10)
+    $ showString "SumNode "
+    . showsPrec 11 l
+    . showString " "
+    . showsPrec 11 r
+  showsPrec p (ManyNode b t) =
+    showParen (p >= 10)
+    $ showString "ManyNode "
+    . showsPrec 11 b
+    . showString " "
+    . showsPrec 11 t
 
 instance Functor p => Functor (ParseTree p) where
   fmap _ EmptyNode          = EmptyNode

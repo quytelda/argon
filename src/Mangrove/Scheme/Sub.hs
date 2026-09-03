@@ -36,6 +36,18 @@ data SubScheme r
   | Option !Text (TextParser r) -- ^ Suboptions have the form "KEY=VALUE"
   deriving (Functor)
 
+instance Show (SubScheme r) where
+  showsPrec p (Parameter tp) =
+    showParen (p >= 10)
+    $ showString "Parameter "
+    . showsTextParser tp
+  showsPrec p (Option key tp) =
+    showParen (p >= 10)
+    $ showString "Option "
+    . shows key
+    . showString " "
+    . showsTextParser tp
+
 instance Valency SubScheme where
   valency _ = Just 1
 
