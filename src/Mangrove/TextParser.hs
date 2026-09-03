@@ -32,6 +32,7 @@ module Mangrove.TextParser
   , parseLazyTextBuilder
   , parseString
   , parseFilePath
+  , showsTextParser
 
     -- * Automatic Parser Selection
   , DefaultParser(..)
@@ -55,6 +56,21 @@ data TextParser r = TextParser
   { parserHint :: !Text -- ^ A hint about the type of input this parser expects
   , parserRun  :: Text -> Either Text r -- ^ An actual parsing function
   } deriving (Functor)
+
+instance Show (TextParser r) where
+  showsPrec p parser = showParen (p >= 11)
+    $ showString "TextParser "
+    . showString "{ parserHint = " . shows (parserHint parser)
+    . showString ", parserRun = _"
+    . showString "}"
+
+-- | A nicer way to Show 'TextParser's is to use the parser's hint,
+-- surrounded by angle brackets, e.g. @<INT>@.
+showsTextParser :: TextParser a -> ShowS
+showsTextParser TextParser{parserHint = hint} =
+  showString "<"
+  . showString (T.unpack hint)
+  . showString ">"
 
 -- | A more general function for running t'TextParser's.
 runTextParser :: MonadError Builder m => TextParser r -> Text -> m r
