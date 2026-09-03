@@ -63,6 +63,7 @@ test-suite mangrove-cli-test
       Mangrove.ParseTreeSpec
       Mangrove.StreamSpec
       Spec
+      StructureEq
       TestParsers
       Paths_mangrove_cli
   autogen-modules:
