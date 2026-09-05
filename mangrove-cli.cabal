@@ -33,6 +33,7 @@ library
       Mangrove.Resolve
       Mangrove.Scheme.Sub
       Mangrove.Scheme.Unix
+      Mangrove.Stream
       Mangrove.Text
       Mangrove.TextParser
       Mangrove.Token
@@ -58,8 +59,8 @@ test-suite mangrove-cli-test
   main-is: Main.hs
   other-modules:
       General
-      Mangrove.ParserSpec
       Mangrove.ParseTreeSpec
+      Mangrove.StreamSpec
       Spec
       TestParsers
       Paths_mangrove_cli
