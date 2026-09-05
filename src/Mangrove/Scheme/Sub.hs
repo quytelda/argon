@@ -27,6 +27,7 @@ import           Data.Text           (Text)
 import           Mangrove.Parser
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
+import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.TextParser
 import           Mangrove.Token

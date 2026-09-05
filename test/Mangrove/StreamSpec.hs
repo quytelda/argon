@@ -2,14 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications  #-}
 
-module Mangrove.ParserSpec (spec) where
+module Mangrove.StreamSpec (spec) where
 
 import           Data.Text.Lazy.Builder
 import           Test.Hspec
 
 import           Mangrove
-import           Mangrove.Parser
 import           Mangrove.Scheme.Unix
+import           Mangrove.Stream
 
 data StreamResult r
   = SSuccess r
