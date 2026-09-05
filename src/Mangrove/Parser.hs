@@ -90,6 +90,7 @@ import           Data.Version
 
 import           Mangrove.Resolve
 import           Mangrove.Text
+import           Mangrove.Token
 import           Mangrove.Valency
 
 --------------------------------------------------------------------------------
@@ -259,24 +260,7 @@ instance (Valency s, Scheme s) => Render (ParseTree s r) where
 
 -- | A scheme is a system of parsers and tokens. It parses a sequence
 -- of arguments into tokens and values.
-class (Functor s, Resolve s, Eq (Token s), Render (Token s), Show (Token s)) => Scheme (s :: Type -> Type) where
-  -- | A token represents a particular interpretation of an argument
-  -- string under this parsing scheme.
-  data Token s
-
-  -- | This type indicates whether a parsing scheme accepts requests
-  -- for information.
-  --
-  -- When @RequestSupport scheme@ is @True@, a 'SupportsResponse'
-  -- instance should be provided for @scheme@.
-  type RequestSupport s :: Bool
-  type RequestSupport s = 'False
-
-  -- | 'delimiter' is the character that separates argument strings in
-  -- combined string representation. For example, arguments in the CLI
-  -- command @ls -a -l /var@ are separated by spaces.
-  delimiter :: Proxy s -> Char
-
+class (Functor s, Resolve s, HasTokens s) => Scheme (s :: Type -> Type) where
   -- | Parse special control arguments that don't represent tokens in
   -- the scheme, but control aspects of how parsing proceeds (e.g.
   -- escaping).

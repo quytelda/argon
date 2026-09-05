@@ -54,6 +54,7 @@ import           Mangrove.Scheme.Sub    (SubScheme)
 import qualified Mangrove.Scheme.Sub    as Sub
 import           Mangrove.Text
 import           Mangrove.TextParser
+import           Mangrove.Token
 import           Mangrove.Valency
 
 --------------------------------------------------------------------------------
@@ -177,7 +178,7 @@ isMarked :: Text -> Bool
 isMarked "-" = False
 isMarked s   = "-" `T.isPrefixOf` s
 
-instance Scheme UnixScheme where
+instance HasTokens UnixScheme where
   data Token UnixScheme
     -- | A freeform positional argument that is not an option or command
     = UnixArgument Text
@@ -187,10 +188,11 @@ instance Scheme UnixScheme where
     | UnixOption Flag (Maybe Text)
     deriving (Eq, Show)
 
-  type RequestSupport UnixScheme = 'True
-
   delimiter _ = ' '
 
+  type RequestSupport UnixScheme = 'True
+
+instance Scheme UnixScheme where
   parseSpecials = do
     peekMaybe >>= \case
       Just "--" -> pop_ *> setEscaped True

@@ -34,6 +34,7 @@ library
       Mangrove.Scheme.Unix
       Mangrove.Text
       Mangrove.TextParser
+      Mangrove.Token
       Mangrove.Unix
       Mangrove.Valency
   other-modules:
