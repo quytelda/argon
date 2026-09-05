@@ -29,6 +29,7 @@ library
   exposed-modules:
       Mangrove
       Mangrove.Parser
+      Mangrove.ParseTree
       Mangrove.Resolve
       Mangrove.Scheme.Sub
       Mangrove.Scheme.Unix
@@ -58,6 +59,7 @@ test-suite mangrove-cli-test
   other-modules:
       General
       Mangrove.ParserSpec
+      Mangrove.ParseTreeSpec
       Spec
       TestParsers
       Paths_mangrove_cli

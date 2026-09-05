@@ -25,6 +25,7 @@ import           Control.Applicative
 import           Data.Text           (Text)
 
 import           Mangrove.Parser
+import           Mangrove.ParseTree
 import           Mangrove.Resolve
 import           Mangrove.Text
 import           Mangrove.TextParser

@@ -38,6 +38,7 @@ import           Data.List.NonEmpty   (NonEmpty)
 import           Data.Text            (Text)
 
 import           Mangrove.Parser
+import           Mangrove.ParseTree
 import           Mangrove.Scheme.Sub  (SubParser, SubScheme)
 import qualified Mangrove.Scheme.Sub  as Sub
 import           Mangrove.Scheme.Unix
