@@ -43,9 +43,9 @@ module Mangrove
   , runArgumentParser'
   ) where
 
-import           Data.Text          (Text)
-import qualified Data.Text          as T
-import qualified Data.Text.IO       as TIO
+import           Data.Text                (Text)
+import qualified Data.Text                as T
+import qualified Data.Text.IO             as TIO
 import           System.Environment
 import           System.Exit
 import           System.IO
@@ -56,7 +56,6 @@ import           Mangrove.Resolve
 import           Mangrove.Scheme
 import           Mangrove.Stream
 import           Mangrove.Text
-import           Mangrove.Token
 
 -- | The results of a parsing operation.
 --

@@ -57,7 +57,6 @@ import qualified Mangrove.Scheme.Sub    as Sub
 import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.TextParser
-import           Mangrove.Token
 import           Mangrove.Valency
 
 --------------------------------------------------------------------------------
@@ -181,7 +180,7 @@ isMarked :: Text -> Bool
 isMarked "-" = False
 isMarked s   = "-" `T.isPrefixOf` s
 
-instance HasTokens UnixScheme where
+instance ParserInfo UnixScheme where
   data Token UnixScheme
     -- | A freeform positional argument that is not an option or command
     = UnixArgument Text

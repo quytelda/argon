@@ -30,7 +30,6 @@ import           Mangrove.Scheme
 import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.TextParser
-import           Mangrove.Token
 import           Mangrove.Valency
 
 -- | Parsers for subarguments of an option (e.g. @--option key=value@).
@@ -60,7 +59,7 @@ instance Resolve SubScheme where
   resolve (Option key (TextParser hint _)) =
     ExpectedError [render key <> "=" <> render hint]
 
-instance HasTokens SubScheme where
+instance ParserInfo SubScheme where
   data Token SubScheme
     = SubAssoc Text Text -- ^ A "KEY=VALUE" argument
     | SubArgument Text -- ^ A standard freeform argument
