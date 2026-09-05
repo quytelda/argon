@@ -31,6 +31,7 @@ library
       Mangrove.Parser
       Mangrove.ParseTree
       Mangrove.Resolve
+      Mangrove.Scheme
       Mangrove.Scheme.Sub
       Mangrove.Scheme.Unix
       Mangrove.Stream
