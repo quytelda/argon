@@ -25,7 +25,8 @@ with error handling and context management.
 
 module Mangrove.Stream
   ( -- * Stream Parser
-    StreamParser(..)
+    IsParser(..)
+  , StreamParser(..)
   , StreamHandler(..)
   , StreamState(..)
   , RequestHandler
@@ -58,12 +59,33 @@ import           Control.Applicative
 import           Control.Monad.Except
 import           Data.Kind
 import qualified Data.List              as List
+import           Data.Proxy
 import           Data.Text              (Text)
 import qualified Data.Text.Lazy         as TL
 import qualified Data.Text.Lazy.Builder as TLB
 
 import           Mangrove.Text
-import           Mangrove.Token
+
+-- | A class for types that have all the properties needed for parsing
+-- with the 'StreamParser' monad.
+class (Eq (Token s), Render (Token s), Show (Token s)) => IsParser (s :: Type -> Type) where
+  -- | A token represents a particular interpretation of an argument
+  -- string.
+  data Token s
+
+  -- | This type indicates whether a parsing scheme accepts requests
+  -- for information.
+  --
+  -- When @RequestSupport scheme@ is @True@, a
+  -- 'Mangrove.Scheme.SupportsResponse' instance should be provided
+  -- for @scheme@.
+  type RequestSupport s :: Bool
+  type RequestSupport s = 'False
+
+  -- | 'delimiter' is the character that separates argument strings in
+  -- combined string representation. For example, arguments in the CLI
+  -- command @ls -a -l /var@ are separated by spaces.
+  delimiter :: Proxy s -> Char
 
 -- | The current state of a stream parser.
 --
@@ -85,8 +107,8 @@ data StreamState s = StreamState
   , streamEscaped :: !Bool      -- ^ Escaped mode
   }
 
-deriving instance HasTokens s => Show (StreamState s)
-deriving instance HasTokens s => Eq (StreamState s)
+deriving instance IsParser s => Show (StreamState s)
+deriving instance IsParser s => Eq (StreamState s)
 
 -- | What information is being requested?
 data RequestType

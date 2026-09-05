@@ -37,7 +37,6 @@ library
       Mangrove.Stream
       Mangrove.Text
       Mangrove.TextParser
-      Mangrove.Token
       Mangrove.Unix
       Mangrove.Valency
   other-modules:

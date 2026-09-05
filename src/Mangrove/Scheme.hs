@@ -31,17 +31,16 @@ module Mangrove.Scheme
   ) where
 
 import           Data.Kind
-import           Data.Text           (Text)
+import           Data.Text          (Text)
 import           Data.Version
 
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
 import           Mangrove.Stream
-import           Mangrove.Token
 
 -- | A scheme is a system of parsers and tokens. It parses a sequence
 -- of arguments into tokens and values.
-class (Functor s, Resolve s, HasTokens s) => Scheme (s :: Type -> Type) where
+class (Functor s, Resolve s, IsParser s) => Scheme (s :: Type -> Type) where
   -- | Parse special control arguments that don't represent tokens in
   -- the scheme, but control aspects of how parsing proceeds (e.g.
   -- escaping).

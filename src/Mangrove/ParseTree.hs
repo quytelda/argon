@@ -36,8 +36,8 @@ import           Data.Kind
 import           Data.Proxy
 
 import           Mangrove.Resolve
+import           Mangrove.Stream
 import           Mangrove.Text
-import           Mangrove.Token
 import           Mangrove.Valency
 
 -- | `ParseTree scheme r` is an expression tree composed of parsers
@@ -169,7 +169,7 @@ isChoice :: Valency s => ParseTree s r -> Bool
 isChoice (SumNode l r) = not (nullary l) && not (nullary r)
 isChoice _             = False
 
-instance (Valency s, HasTokens s, forall a. Render (s a)) => Render (ParseTree s r) where
+instance (Valency s, IsParser s, forall a. Render (s a)) => Render (ParseTree s r) where
   -- special cases
   render n@(SumNode l _)
     | isOptional n = renderDelimitedIf brackets (not . isOptional) l
