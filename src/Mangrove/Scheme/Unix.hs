@@ -302,10 +302,11 @@ instance Scheme UnixScheme where
       satiate subtree
       >>= resolveLifted
 
-  usageInfo (Parameter tp) = render $ parserHint tp
-  usageInfo (Command info subtree) =
+instance Render (UnixScheme r) where
+  render (Parameter tp) = render $ parserHint tp
+  render (Command info subtree) =
     "{" <> render (cmdHead info) <> " " <> render subtree <> "}"
-  usageInfo (Option info subtree) =
+  render (Option info subtree) =
     render flag
     <> if nullary subtree
        then mempty
@@ -314,7 +315,7 @@ instance Scheme UnixScheme where
           separator = case flag of
                         LongFlag _ -> "="
                         _          -> ""
-  usageInfo (RequestOption info _) =
+  render (RequestOption info _) =
     render (optHead info)
 
 instance Render (Token UnixScheme) where

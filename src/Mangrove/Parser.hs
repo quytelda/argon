@@ -225,12 +225,12 @@ isChoice :: Valency s => ParseTree s r -> Bool
 isChoice (SumNode l r) = not (nullary l) && not (nullary r)
 isChoice _             = False
 
-instance (Valency s, Scheme s) => Render (ParseTree s r) where
+instance (Valency s, HasTokens s, forall a. Render (s a)) => Render (ParseTree s r) where
   -- special cases
   render n@(SumNode l _)
     | isOptional n = renderDelimitedIf brackets (not . isOptional) l
 
-  render (ParseNode parser) = usageInfo parser
+  render (ParseNode parser) = render parser
   render (ProdNode _ l r)
     | nullary l && nullary r = ""
     | nullary l = _render r
@@ -272,10 +272,6 @@ class (Functor s, Resolve s, HasTokens s) => Scheme (s :: Type -> Type) where
   -- it does apply, it consumes the relevant input and returns a
   -- result.
   activate :: s r -> StreamParser s r
-
-  -- | Render human-readable usage information for a particular
-  -- parser.
-  usageInfo :: s r -> Builder
 
 -- | Program metadata for displaying help output.
 data ProgramInfo (s :: Type -> Type) = ProgramInfo
