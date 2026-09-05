@@ -53,6 +53,7 @@ import           System.IO
 import           Mangrove.Parser
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
+import           Mangrove.Scheme
 import           Mangrove.Stream
 import           Mangrove.Text
 import           Mangrove.Token
