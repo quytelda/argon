@@ -53,6 +53,7 @@ import           System.IO
 import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Text
+import           Mangrove.Token
 
 -- | The results of a parsing operation.
 --

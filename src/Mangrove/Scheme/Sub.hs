@@ -28,6 +28,7 @@ import           Mangrove.Parser
 import           Mangrove.Resolve
 import           Mangrove.Text
 import           Mangrove.TextParser
+import           Mangrove.Token
 import           Mangrove.Valency
 
 -- | Parsers for subarguments of an option (e.g. @--option key=value@).
@@ -57,7 +58,7 @@ instance Resolve SubScheme where
   resolve (Option key (TextParser hint _)) =
     ExpectedError [render key <> "=" <> render hint]
 
-instance Scheme SubScheme where
+instance HasTokens SubScheme where
   data Token SubScheme
     = SubAssoc Text Text -- ^ A "KEY=VALUE" argument
     | SubArgument Text -- ^ A standard freeform argument
@@ -65,6 +66,7 @@ instance Scheme SubScheme where
 
   delimiter _ = ','
 
+instance Scheme SubScheme where
   activate parser = do
     next <- peek
     escaped <- getEscaped
