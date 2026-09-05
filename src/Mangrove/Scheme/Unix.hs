@@ -47,7 +47,6 @@ import qualified Data.Text.Lazy.Builder as TLB
 import           Data.Version
 import           Data.Void
 
-import           Mangrove
 import           Mangrove.Parser
 import           Mangrove.ParseTree
 import           Mangrove.Resolve
