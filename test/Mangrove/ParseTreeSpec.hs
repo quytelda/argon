@@ -5,17 +5,109 @@
 module Mangrove.ParseTreeSpec (spec) where
 
 import           Control.Applicative
-import           Data.Text            (Text)
+import           Data.Text             (Text)
 import           Test.Hspec
+import           Test.Hspec.QuickCheck
+import           Test.QuickCheck       hiding (Result (..))
 
 import           Mangrove
 import           Mangrove.ParseTree
 import           Mangrove.Scheme.Unix
 
+import           Arbitrary
+import           StructureEq
 import           TestParsers
+
+--------------------------------------------------------------------------------
+-- Functor Laws
+
+prop_fmapIdLaw :: UnixParser Int -> Bool
+prop_fmapIdLaw tree = structEq tree (fmap id tree)
+
+prop_fmapComLaw :: UnixParser Int -> Bool
+prop_fmapComLaw tree =
+  fmap (inc . dbl) tree
+  `structEq`
+  (fmap inc . fmap dbl) tree
+  where
+    inc = (1+)
+    dbl = (2*)
+
+--------------------------------------------------------------------------------
+-- Applicative Laws
+
+prop_applicativeIdLaw
+  :: ParseTree UnixScheme Int
+  -> ArgList
+  -> Bool
+prop_applicativeIdLaw tree (ArgList args) =
+  result1 == result2
+  where
+    result1 = runHelpfulParser_ (pure id <*> tree) args
+    result2 = runHelpfulParser_ tree args
+
+prop_applicativeHomLaw
+  :: Fun Int Int
+  -> Int
+  -> ArgList
+  -> Bool
+prop_applicativeHomLaw (Fn f) value (ArgList args) =
+  result1 == result2
+  where
+    tree1 = pure f <*> pure value :: ParseTree UnixScheme Int
+    tree2 = pure (f value) :: ParseTree UnixScheme Int
+    result1 = runHelpfulParser_ tree1 args
+    result2 = runHelpfulParser_ tree2 args
+
+prop_applicativeIntLaw
+  :: Fun (Int, Int) Int
+  -> ParseTree UnixScheme Int
+  -> Int
+  -> ArgList
+  -> Bool
+prop_applicativeIntLaw (Fn2 f) tree n (ArgList args) =
+  result1 == result2
+  where
+    u = fmap f tree
+    result1 = runHelpfulParser_ (u <*> pure n) args
+    result2 = runHelpfulParser_ (pure ($ n) <*> u) args
+
+prop_applicativeComLaw
+  :: Fun (Int, Int) Int
+  -> Fun (Int, Int) Int
+  -> ParseTree UnixScheme Int
+  -> ParseTree UnixScheme Int
+  -> ParseTree UnixScheme Int
+  -> ArgList
+  -> Bool
+prop_applicativeComLaw (Fn2 f) (Fn2 g) t1 t2 w (ArgList args) =
+  result1 == result2
+  where
+    u = fmap f t1
+    v = fmap g t2
+    tree1 = pure (.) <*> u <*> v <*> w
+    tree2 = u <*> (v <*> w)
+    result1 = runHelpfulParser_ tree1 args
+    result2 = runHelpfulParser_ tree2 args
 
 spec :: Spec
 spec = do
+  describe "Functor Instance" $ do
+    prop "satisfies identity law"
+      prop_fmapIdLaw
+    prop "satisfies composition law"
+      prop_fmapComLaw
+
+  describe "Applicative Instance" $ do
+    prop "satisfies identity law"
+      prop_applicativeIdLaw
+    prop "satisfies homomorphism law"
+      prop_applicativeHomLaw
+    prop "satisfies interchange law"
+      prop_applicativeIntLaw
+    prop "satisfies composition law"
+      prop_applicativeComLaw
+
   describe "pure" $ do
     it "resolves to the given value" $ do
       runHelpfulParser_ (ValueNode 'a' :: ParseTree UnixScheme Char) []
