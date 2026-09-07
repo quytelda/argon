@@ -13,6 +13,7 @@ import           Test.QuickCheck       hiding (Result (..))
 import           Mangrove
 import           Mangrove.ParseTree
 import           Mangrove.Scheme.Unix
+import           Mangrove.Valency
 
 import           Arbitrary
 import           StructureEq
@@ -90,6 +91,30 @@ prop_applicativeComLaw (Fn2 f) (Fn2 g) t1 t2 w (ArgList args) =
     result1 = runHelpfulParser_ tree1 args
     result2 = runHelpfulParser_ tree2 args
 
+--------------------------------------------------------------------------------
+
+prop_liftA2AddsValencies
+  :: UnixParser Int
+  -> UnixParser Int
+  -> Bool
+prop_liftA2AddsValencies l r =
+  valency (liftA2 (+) l r) == liftA2 (+) (valency l) (valency r)
+
+prop_liftA2CombinesResults
+  :: Fun (Int, Int) Int
+  -> UnixParser Int
+  -> UnixParser Int
+  -> ArgList
+  -> Bool
+prop_liftA2CombinesResults (Fn2 f) l r (ArgList args) =
+  case (resultL, resultR, resultA) of
+    (Success _ x, Success _ y, Success _ z) -> z == f x y
+    _ -> resultA == resultL || resultA == resultR
+  where
+    resultL = runHelpfulParser_ l args
+    resultR = runHelpfulParser_ r args
+    resultA = runHelpfulParser_ (liftA2 f l r) args
+
 spec :: Spec
 spec = do
   describe "Functor Instance" $ do
@@ -121,6 +146,11 @@ spec = do
       -- should be equivalent
       runHelpfulParser_ ((+) <$> pure 1 <*> pure 2 :: ParseTree UnixScheme Int) []
         `shouldBe` Success [] 3
+
+    prop "combines results"
+      prop_liftA2CombinesResults
+    prop "adds valencies"
+      prop_liftA2AddsValencies
 
   describe "empty" $ do
     it "doesn't resolve to any value" $ do
