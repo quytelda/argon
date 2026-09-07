@@ -110,6 +110,7 @@ data Result s r where
 
 deriving instance Show r => Show (Result s r)
 deriving instance Eq r => Eq (Result s r)
+deriving instance Functor (Result s)
 
 -- | Create a default initial t'StreamState' from a list of arguments.
 argsToState :: [Text] -> StreamState s
