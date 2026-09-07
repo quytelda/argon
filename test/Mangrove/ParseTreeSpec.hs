@@ -93,6 +93,12 @@ prop_applicativeComLaw (Fn2 f) (Fn2 g) t1 t2 w (ArgList args) =
 
 --------------------------------------------------------------------------------
 
+prop_valencyPositive
+  :: UnixParser Int
+  -> Bool
+prop_valencyPositive p =
+  all (>= 0) (valency p)
+
 prop_liftA2AddsValencies
   :: UnixParser Int
   -> UnixParser Int
@@ -115,6 +121,35 @@ prop_liftA2CombinesResults (Fn2 f) l r (ArgList args) =
     resultR = runHelpfulParser_ r args
     resultA = runHelpfulParser_ (liftA2 f l r) args
 
+prop_altMaxesValency
+  :: UnixParser Int
+  -> UnixParser Int
+  -> Bool
+prop_altMaxesValency l r =
+  valency (l <|> r) == liftA2 (max) (valency l) (valency r)
+
+prop_altPicksOne
+  :: ParseTree UnixScheme Int
+  -> ParseTree UnixScheme Int
+  -> ArgList
+  -> Bool
+prop_altPicksOne l r (ArgList args) =
+  resultSum == resultL || resultSum == resultR
+  where
+    resultL = runHelpfulParser_ l args
+    resultR = runHelpfulParser_ r args
+    resultSum = runHelpfulParser_ (l <|> r) args
+
+prop_altEmptyIdentity
+  :: (ParseTree UnixScheme Int -> ParseTree UnixScheme Int)
+  -> ParseTree UnixScheme Int
+  -> ArgList
+  -> Bool
+prop_altEmptyIdentity append tree (ArgList args) =
+  runHelpfulParser_ tree args == runHelpfulParser_ (append tree) args
+
+--------------------------------------------------------------------------------
+
 spec :: Spec
 spec = do
   describe "Functor Instance" $ do
@@ -132,6 +167,10 @@ spec = do
       prop_applicativeIntLaw
     prop "satisfies composition law"
       prop_applicativeComLaw
+
+  describe "Valency Instance" $ do
+    prop "valency is always positive"
+      prop_valencyPositive
 
   describe "pure" $ do
     it "resolves to the given value" $ do
@@ -157,7 +196,20 @@ spec = do
       runHelpfulParser_ (empty :: ParseTree UnixScheme Char) []
         `shouldBe` Failure "empty"
 
+    it "has valency zero" $ do
+      valency (empty :: ParseTree UnixScheme Char)
+        `shouldBe` Just 0
+
   describe "(<|>)" $ do
+    prop "valency equals the max valency between its children"
+      prop_altMaxesValency
+    prop "yields the left or the right result"
+      prop_altPicksOne
+    prop "empty is left identity" $
+      prop_altEmptyIdentity (empty <|>)
+    prop "empty is right identity" $
+      prop_altEmptyIdentity (<|> empty)
+
     context "when the left child is resolvable" $ do
       it "resolves as the left child" $ do
         runHelpfulParser_ (pure "asdf" <|> opt_e_param) []
