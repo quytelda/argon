@@ -15,7 +15,12 @@ Module      : Mangrove.Parser
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
-High-level parsing functions
+This module contains types and functions necessary for running
+argument parsers. These functions are generic across different parsing
+schemes.
+
+Most clients won't import this module directly, since its contents are
+re-exported by the "Mangrove" module alongside other helpful symbols.
 -}
 module Mangrove.Parser
   ( -- * Standard Interface

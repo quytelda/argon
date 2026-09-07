@@ -5,8 +5,13 @@ Module      : Mangrove.Unix
 Copyright   : (c) Quytelda Kahja, 2026
 License     : BSD-3-Clause
 
-An API for defining, constructing, and running Unix-style command line
-parsers.
+This module contains the building blocks for creating UNIX-style
+command line parsers. Parsers are intended to be combined using the
+standard combinators in "Control.Applicative".
+
+The functions for running parsers live in the "Mangrove.Parser" module
+and are re-exported by the "Mangrove" module alongside other useful
+symbols.
 -}
 
 module Mangrove.Unix
